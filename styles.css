@@ -301,33 +301,21 @@ body {
     opacity: 0.8;
 }
 
-#powerArrowContainer {
-    pointer-events: none;
+.power-arrow-indicator {
     position: absolute;
-    right: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 1000;
-}
-
-.power-arrow {
-    width: 30px;
-    height: 2px;
-    background-color: #ff0000;
-    position: relative;
-    right: 0;
-    transition: transform 0.1s ease-out;
-}
-
-.power-arrow::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
+    right: 22px;
+    bottom: 146px;
     width: 0;
     height: 0;
-    border-top: 5px solid transparent;
-    border-bottom: 5px solid transparent;
-    border-left: 10px solid #ff0000;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    border-right: 12px solid #ff0000;
+    animation: bounce 1s infinite;
+    z-index: 3;
+    display: none;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(5px); }
 } 

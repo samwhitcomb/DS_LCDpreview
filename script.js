@@ -153,69 +153,16 @@ const flows = {
                 // Reset all connection states
                 this.connectionState = 'searching';
                 
-                // Create or show the external power arrow container
-                let arrowContainer = document.getElementById('powerArrowContainer');
-                if (!arrowContainer) {
-                    arrowContainer = document.createElement('div');
-                    arrowContainer.id = 'powerArrowContainer';
-                    arrowContainer.style.position = 'absolute';
-                    arrowContainer.style.right = '20px';
-                    arrowContainer.style.top = '50%';
-                    arrowContainer.style.transform = 'translateY(-50%)';
-                    arrowContainer.style.zIndex = '1000';
-                    
-                    const arrow = document.createElement('div');
-                    arrow.className = 'power-arrow';
-                    arrow.style.width = '30px';
-                    arrow.style.height = '2px';
-                    arrow.style.backgroundColor = '#ff0000';
-                    arrow.style.position = 'relative';
-                    arrow.style.right = '0';
-                    
-                    // Create arrow head
-                    const arrowHead = document.createElement('div');
-                    arrowHead.style.position = 'absolute';
-                    arrowHead.style.right = '0';
-                    arrowHead.style.top = '50%';
-                    arrowHead.style.transform = 'translateY(-50%)';
-                    arrowHead.style.width = '0';
-                    arrowHead.style.height = '0';
-                    arrowHead.style.borderTop = '5px solid transparent';
-                    arrowHead.style.borderBottom = '5px solid transparent';
-                    arrowHead.style.borderLeft = '10px solid #ff0000';
-                    
-                    arrow.appendChild(arrowHead);
-                    arrowContainer.appendChild(arrow);
-                    document.body.appendChild(arrowContainer);
-                } else {
-                    arrowContainer.style.display = 'block';
-                }
-                
                 let frame = 0;
                 const animate = () => {
                     const currentStates = flows[currentFlow];
                     const currentState = currentStates[currentStateIndex];
                     if (currentState.title === "Off") {
-                        currentState.draw(ctx, frame);
-                        drawExternalPowerArrow(frame++);
+                        currentState.draw(ctx, frame++);
                         requestAnimationFrame(animate);
                     }
                 };
                 animate();
-                
-                return {
-                    cleanup: () => {
-                        const container = document.getElementById('powerArrowContainer');
-                        if (container) {
-                            container.style.display = 'none';
-                        }
-                    }
-                };
-            },
-            onExit: (data) => {
-                if (data && data.cleanup) {
-                    data.cleanup();
-                }
             }
         },
         {
@@ -287,8 +234,8 @@ const flows = {
                     ctx.fillText('network...', 80, 55+5);
                 } else if (this.connectionState === 'connected') {
                     // Calculate fade out opacity for connected message
-                    const fadeStart = 800; // When connection is established
-                    const fadeDuration = 200; // 1 second fade
+                    const fadeStart = 600; // When connection is established
+                    const fadeDuration = 100; // 1 second fade
                     const opacity = Math.max(0, 1 - ((frame - fadeStart) / fadeDuration));
                     
                     if (opacity > 0) {
@@ -317,10 +264,13 @@ const flows = {
                         if (this.connectionState === 'searching' || this.connectionState === 'connecting') {
                             currentState.led = { state: 'breathing', color: 'blue' };
                         } else if (this.connectionState === 'connected') {
-                            if (frame >= 560) { // 540 (connection) + 20 frames (2 seconds)
-                                currentState.led = { state: 'on', color: 'green' };
+                            if (frame >= 700) { // Wait for fade out to complete (800 + 200 frames)
+                                // Transition to Fully On state
+                                currentStateIndex = 3; // Move to Fully On state
+                                updateDisplay();
+                                return;
                             } else {
-                                currentState.led = { state: 'on', color: 'blue' };
+                                currentState.led = { state: 'on', color: 'green' };
                             }
                         }
                         
@@ -344,6 +294,18 @@ const flows = {
                 };
                 animate();
             }
+        },
+        {
+            title: "Fully On",
+            explanation: "Device is fully powered on and connected.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                drawBattery(ctx, 85);
+                drawWifiStatus(ctx, 'connected', frame);
+            },
+            led: { state: 'on', color: 'green' }
         },
         {
             title: "Shutdown",
@@ -826,6 +788,16 @@ function updateDisplay() {
         currentAnimation = null;
     }
     
+    // Show/hide power arrow based on state
+    const powerArrow = document.querySelector('.power-arrow-indicator');
+    if (powerArrow) {
+        if (currentState.title === "Off" || currentState.title === "Fully On") {
+            powerArrow.style.display = 'block';
+        } else {
+            powerArrow.style.display = 'none';
+        }
+    }
+    
     // Handle animation setup
     if (currentState.onEnter) {
         currentAnimation = currentState.onEnter();
@@ -903,7 +875,7 @@ function startShutdownCountdown() {
     
     // Switch to shutdown state
     currentFlow = 'power';
-    currentStateIndex = 3; // Move to shutdown state
+    currentStateIndex = 4; // Move to shutdown state
     updateDisplay();
     
     // Start countdown animation
@@ -914,7 +886,7 @@ function startShutdownCountdown() {
         if (remainingTime <= 0) {
             // Complete shutdown
             clearInterval(countdownInterval);
-            currentStateIndex = 4; // Move to shutdown complete state
+            currentStateIndex = 5; // Move to shutdown complete state
             updateDisplay();
             isPoweredOff = true; // Set power state to off
         }
@@ -928,8 +900,8 @@ function cancelShutdown() {
     }
     isShuttingDown = false;
     
-    // Return to On state
-    currentStateIndex = 2;
+    // Return to Fully On state
+    currentStateIndex = 3; // Move to Fully On state
     updateDisplay();
 }
 
