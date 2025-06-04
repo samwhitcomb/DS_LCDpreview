@@ -299,4 +299,35 @@ body {
 
 .power-button:active {
     opacity: 0.8;
+}
+
+#powerArrowContainer {
+    pointer-events: none;
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1000;
+}
+
+.power-arrow {
+    width: 30px;
+    height: 2px;
+    background-color: #ff0000;
+    position: relative;
+    right: 0;
+    transition: transform 0.1s ease-out;
+}
+
+.power-arrow::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 10px solid #ff0000;
 } 

@@ -20,7 +20,7 @@ function drawBattery(ctx, level) {
 }
 
 // Power button animation function
-function drawPowerButtonAnimation(ctx, frame) {
+function drawPowerButtonAnimation(ctx, frame, isOff = false) {
     const x = 140;  // Position from right
     const y = 40;   // Center vertically
     const arrowLength = 15;
@@ -34,8 +34,11 @@ function drawPowerButtonAnimation(ctx, frame) {
     const bounceOffset = Math.abs(Math.sin(frame * 0.05)) * 10; // Reduced speed
     const arrowOpacity = 0.8;
     
+    // Set color based on device state
+    const color = isOff ? '#ff0000' : '#ffffff';
+    
     // Draw vertical line (power button) with fixed height
-    ctx.strokeStyle = `rgba(255, 255, 255, ${lineOpacity})`;
+    ctx.strokeStyle = `rgba(${isOff ? '255, 0, 0' : '255, 255, 255'}, ${lineOpacity})`;
     ctx.lineWidth = arrowWidth;
     ctx.beginPath();
     ctx.moveTo(x + 5, y - lineHeight/2);
@@ -43,7 +46,7 @@ function drawPowerButtonAnimation(ctx, frame) {
     ctx.stroke();
     
     // Draw bouncing arrow
-    ctx.strokeStyle = `rgba(255, 255, 255, ${arrowOpacity})`;
+    ctx.strokeStyle = `rgba(${isOff ? '255, 0, 0' : '255, 255, 255'}, ${arrowOpacity})`;
     ctx.beginPath();
     // Start position of arrow (further left)
     const startX = x - arrowLength - 20;
@@ -56,6 +59,19 @@ function drawPowerButtonAnimation(ctx, frame) {
     ctx.moveTo(currentX + arrowLength, y);
     ctx.lineTo(currentX + arrowLength - 5, y + 5);
     ctx.stroke();
+}
+
+// Draw external power button arrow animation
+function drawExternalPowerArrow(frame) {
+    const arrowContainer = document.getElementById('powerArrowContainer');
+    if (!arrowContainer) return;
+
+    const arrow = arrowContainer.querySelector('.power-arrow');
+    if (!arrow) return;
+
+    // Calculate bounce effect
+    const bounceOffset = Math.abs(Math.sin(frame * 0.05)) * 10;
+    arrow.style.transform = `translateX(${bounceOffset}px)`;
 }
 
 // Shutdown countdown animation
@@ -71,18 +87,136 @@ function drawShutdownCountdown(ctx, remainingTime) {
     ctx.fillText(Math.ceil(remainingTime), 80, 50);
 }
 
+// WiFi status drawing function
+function drawWifiStatus(ctx, status, frame) {
+    const x = 100;  // Position from right (next to battery)
+    const y = 5;    // Position from top
+    const size = 10; // Same size as battery
+    
+    ctx.save();
+    
+    switch(status) {
+        case 'searching':
+            // Draw searching animation
+            const angle = (frame * 0.1) % (Math.PI * 2);
+            ctx.beginPath();
+            ctx.arc(x + size/2, y + size/2, size/2, angle, angle + Math.PI * 1.5);
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            break;
+            
+        case 'connecting':
+            // Draw connecting animation (pulsing)
+            const scale = 0.8 + Math.sin(frame * 0.1) * 0.2;
+            ctx.beginPath();
+            ctx.arc(x + size/2, y + size/2, (size/2) * scale, 0, Math.PI * 2);
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            break;
+            
+        case 'connected':
+            // Draw connected symbol
+            ctx.beginPath();
+            ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI * 2);
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            // Draw check mark
+            ctx.beginPath();
+            ctx.moveTo(x + size/3, y + size/2);
+            ctx.lineTo(x + size/2, y + size * 2/3);
+            ctx.lineTo(x + size * 2/3, y + size/3);
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            break;
+    }
+    
+    ctx.restore();
+}
+
 // Flow definitions
 const flows = {
     power: [
         {
             title: "Off",
             explanation: "Device is powered off. Press the power button to turn on.",
-            draw: (ctx) => {
-                // Clear canvas with black
+            draw: (ctx, frame) => {
+                // Clear canvas with black (screen is off)
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
             },
-            led: { state: 'off', color: 'none' }
+            led: { state: 'off', color: 'none' },
+            onEnter: () => {
+                // Reset all connection states
+                this.connectionState = 'searching';
+                
+                // Create or show the external power arrow container
+                let arrowContainer = document.getElementById('powerArrowContainer');
+                if (!arrowContainer) {
+                    arrowContainer = document.createElement('div');
+                    arrowContainer.id = 'powerArrowContainer';
+                    arrowContainer.style.position = 'absolute';
+                    arrowContainer.style.right = '20px';
+                    arrowContainer.style.top = '50%';
+                    arrowContainer.style.transform = 'translateY(-50%)';
+                    arrowContainer.style.zIndex = '1000';
+                    
+                    const arrow = document.createElement('div');
+                    arrow.className = 'power-arrow';
+                    arrow.style.width = '30px';
+                    arrow.style.height = '2px';
+                    arrow.style.backgroundColor = '#ff0000';
+                    arrow.style.position = 'relative';
+                    arrow.style.right = '0';
+                    
+                    // Create arrow head
+                    const arrowHead = document.createElement('div');
+                    arrowHead.style.position = 'absolute';
+                    arrowHead.style.right = '0';
+                    arrowHead.style.top = '50%';
+                    arrowHead.style.transform = 'translateY(-50%)';
+                    arrowHead.style.width = '0';
+                    arrowHead.style.height = '0';
+                    arrowHead.style.borderTop = '5px solid transparent';
+                    arrowHead.style.borderBottom = '5px solid transparent';
+                    arrowHead.style.borderLeft = '10px solid #ff0000';
+                    
+                    arrow.appendChild(arrowHead);
+                    arrowContainer.appendChild(arrow);
+                    document.body.appendChild(arrowContainer);
+                } else {
+                    arrowContainer.style.display = 'block';
+                }
+                
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Off") {
+                        currentState.draw(ctx, frame);
+                        drawExternalPowerArrow(frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+                
+                return {
+                    cleanup: () => {
+                        const container = document.getElementById('powerArrowContainer');
+                        if (container) {
+                            container.style.display = 'none';
+                        }
+                    }
+                };
+            },
+            onExit: (data) => {
+                if (data && data.cleanup) {
+                    data.cleanup();
+                }
+            }
         },
         {
             title: "Power On",
@@ -125,11 +259,87 @@ const flows = {
                         if (frame < 240) { // Continue animation until fade is complete (4 seconds)
                             requestAnimationFrame(animate);
                         } else {
-                            // After fade in completes, move to welcome screen
-                            currentFlow = 'welcome';
-                            currentStateIndex = 0;
+                            // After fade in completes, move to On state
+                            currentStateIndex = 2; // Move to On state
                             updateDisplay();
                         }
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "On",
+            explanation: "Device is powered on. It is automatically searching for a connection.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                
+                // Draw status message based on connection state
+                if (this.connectionState === 'searching') {
+                    ctx.fillText('Searching for', 80, 35+5);
+                    ctx.fillText('connection...', 80, 55+5);
+                } else if (this.connectionState === 'connecting') {
+                    ctx.fillText('Connecting to', 80, 35+5);
+                    ctx.fillText('network...', 80, 55+5);
+                } else if (this.connectionState === 'connected') {
+                    // Calculate fade out opacity for connected message
+                    const fadeStart = 800; // When connection is established
+                    const fadeDuration = 200; // 1 second fade
+                    const opacity = Math.max(0, 1 - ((frame - fadeStart) / fadeDuration));
+                    
+                    if (opacity > 0) {
+                        ctx.globalAlpha = opacity;
+                        ctx.fillText('Connected to', 80, 35+5);
+                        ctx.fillText('network', 80, 55+5);
+                        ctx.globalAlpha = 1;
+                    }
+                }
+                
+                drawBattery(ctx, 85);
+                drawWifiStatus(ctx, this.connectionState || 'searching', frame);
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                let frame = 0;
+                this.connectionState = 'searching';
+                
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "On") {
+                        currentState.draw(ctx, frame++);
+                        
+                        // Update LED state based on connection state and frame
+                        if (this.connectionState === 'searching' || this.connectionState === 'connecting') {
+                            currentState.led = { state: 'breathing', color: 'blue' };
+                        } else if (this.connectionState === 'connected') {
+                            if (frame >= 560) { // 540 (connection) + 20 frames (2 seconds)
+                                currentState.led = { state: 'on', color: 'green' };
+                            } else {
+                                currentState.led = { state: 'on', color: 'blue' };
+                            }
+                        }
+                        
+                        // Update the LED display
+                        ledLight.className = 'led-light';
+                        ledLight.classList.add(currentState.led.state);
+                        ledLight.classList.add(currentState.led.color);
+                        if (currentState.led.state === 'on') {
+                            ledLight.classList.add('on');
+                        }
+                        
+                        // Simulate connection process
+                        if (frame === 200) { // After 2 seconds
+                            this.connectionState = 'connecting';
+                        } else if (frame === 540) { // After 4 seconds
+                            this.connectionState = 'connected';
+                        }
+                        
+                        requestAnimationFrame(animate);
                     }
                 };
                 animate();
@@ -205,6 +415,7 @@ const flows = {
                             requestAnimationFrame(animate);
                         } else {
                             // Return to off state
+                            isPoweredOff = true;
                             currentStateIndex = 0;
                             updateDisplay();
                         }
@@ -223,38 +434,11 @@ const flows = {
                 ctx.fillRect(0, 0, 160, 80);
                 ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
-                ctx.fillText('Welcome!', 10, 40);
+                ctx.textAlign = 'center';
+                ctx.fillText('Device is ON', 80, 30);
+                ctx.fillText('Press power to turn off', 80, 50);
                 drawBattery(ctx, 85);
-            },
-            led: { state: 'on', color: 'green' }
-        },
-        {
-            title: "Menu Screen",
-            explanation: "The main menu showing available options.",
-            draw: (ctx) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.fillText('> Settings', 10, 30);
-                ctx.fillText('  Status', 10, 50);
-                ctx.fillText('  Power Off', 10, 70);
-                drawBattery(ctx, 85);
-            },
-            led: { state: 'on', color: 'white' }
-        },
-        {
-            title: "Status Screen",
-            explanation: "Displaying current device status.",
-            draw: (ctx) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.fillText('Status:', 10, 30);
-                ctx.fillText('Battery: 85%', 10, 50);
-                ctx.fillText('Signal: Good', 10, 70);
-                drawBattery(ctx, 85);
+                drawPowerButtonAnimation(ctx, 0, false);
             },
             led: { state: 'on', color: 'green' }
         }
@@ -614,6 +798,11 @@ const totalStepsSpan = document.getElementById('totalSteps');
 const flowSelect = document.getElementById('flowSelect');
 const ledLight = document.getElementById('ledLight');
 
+// Add these variables at the top with other state variables
+let powerButtonPressStartTime = 0;
+let isPowerButtonPressed = false;
+const SHUTDOWN_HOLD_TIME = 2000; // 2 seconds in milliseconds
+
 // Function to update the display
 function updateDisplay() {
     const currentStates = flows[currentFlow];
@@ -714,7 +903,7 @@ function startShutdownCountdown() {
     
     // Switch to shutdown state
     currentFlow = 'power';
-    currentStateIndex = 2; // Move to shutdown state
+    currentStateIndex = 3; // Move to shutdown state
     updateDisplay();
     
     // Start countdown animation
@@ -725,7 +914,7 @@ function startShutdownCountdown() {
         if (remainingTime <= 0) {
             // Complete shutdown
             clearInterval(countdownInterval);
-            currentStateIndex = 3; // Move to shutdown complete state
+            currentStateIndex = 4; // Move to shutdown complete state
             updateDisplay();
             isPoweredOff = true; // Set power state to off
         }
@@ -739,66 +928,83 @@ function cancelShutdown() {
     }
     isShuttingDown = false;
     
-    // Return to welcome screen
-    currentFlow = 'welcome';
-    currentStateIndex = 0;
+    // Return to On state
+    currentStateIndex = 2;
     updateDisplay();
 }
 
+// Modify the power button event handlers
 powerButton.addEventListener('mousedown', () => {
     if (isPoweredOff) {
         startPowerOn();
     } else {
+        // Start tracking power button press
+        powerButtonPressStartTime = Date.now();
+        isPowerButtonPressed = true;
+        
+        // Start shutdown countdown
         startShutdownCountdown();
     }
 });
 
 powerButton.addEventListener('mouseup', () => {
-    if (isShuttingDown) {
-        const elapsedTime = (Date.now() - shutdownStartTime) / 1000;
-        if (elapsedTime < 2) {
-            // If not held for 2 seconds, cancel shutdown
+    if (isPowerButtonPressed) {
+        const pressDuration = Date.now() - powerButtonPressStartTime;
+        if (pressDuration < SHUTDOWN_HOLD_TIME) {
+            // If not held long enough, cancel shutdown
             cancelShutdown();
         }
+        isPowerButtonPressed = false;
     }
 });
 
 powerButton.addEventListener('mouseleave', () => {
-    if (isShuttingDown) {
-        const elapsedTime = (Date.now() - shutdownStartTime) / 1000;
-        if (elapsedTime < 2) {
-            // If not held for 2 seconds, cancel shutdown
+    if (isPowerButtonPressed) {
+        const pressDuration = Date.now() - powerButtonPressStartTime;
+        if (pressDuration < SHUTDOWN_HOLD_TIME) {
+            // If not held long enough, cancel shutdown
             cancelShutdown();
         }
+        isPowerButtonPressed = false;
     }
 });
 
-// Add touch event handlers
-powerButton.addEventListener('touchstart', () => {
+// Touch events
+powerButton.addEventListener('touchstart', (e) => {
+    e.preventDefault();
     if (isPoweredOff) {
         startPowerOn();
     } else {
+        // Start tracking power button press
+        powerButtonPressStartTime = Date.now();
+        isPowerButtonPressed = true;
+        
+        // Start shutdown countdown
         startShutdownCountdown();
     }
 });
 
-powerButton.addEventListener('touchend', () => {
-    if (isShuttingDown) {
-        const elapsedTime = (Date.now() - shutdownStartTime) / 1000;
-        if (elapsedTime < 2) {
-            // If not held for 2 seconds, cancel shutdown
+powerButton.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (isPowerButtonPressed) {
+        const pressDuration = Date.now() - powerButtonPressStartTime;
+        if (pressDuration < SHUTDOWN_HOLD_TIME) {
+            // If not held long enough, cancel shutdown
             cancelShutdown();
         }
+        isPowerButtonPressed = false;
     }
 });
 
-powerButton.addEventListener('touchcancel', () => {
-    if (isShuttingDown) {
-        const elapsedTime = (Date.now() - shutdownStartTime) / 1000;
-        if (elapsedTime < 2) {
-            // If not held for 2 seconds, cancel shutdown
+powerButton.addEventListener('touchcancel', (e) => {
+    e.preventDefault();
+    if (isPowerButtonPressed) {
+        const pressDuration = Date.now() - powerButtonPressStartTime;
+        if (pressDuration < SHUTDOWN_HOLD_TIME) {
+            // If not held long enough, cancel shutdown
             cancelShutdown();
         }
+        isPowerButtonPressed = false;
     }
 });
 
