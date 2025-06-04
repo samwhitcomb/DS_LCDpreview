@@ -73,6 +73,147 @@ function drawShutdownCountdown(ctx, remainingTime) {
 
 // Flow definitions
 const flows = {
+    power: [
+        {
+            title: "Off",
+            explanation: "Device is powered off. Press the power button to turn on.",
+            draw: (ctx) => {
+                // Clear canvas with black
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+            },
+            led: { state: 'off', color: 'none' }
+        },
+        {
+            title: "Power On",
+            explanation: "Device is powering on with logo fade in.",
+            draw: (ctx, frame) => {
+                // Calculate fade in opacity
+                const fadeDuration = 240; // 4 seconds at 60fps
+                const opacity = Math.min(1, frame / fadeDuration);
+                
+                // Clear canvas
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw DS logo with fading opacity
+                const img = new Image();
+                img.src = 'DS LOGO.png';
+                
+                // Calculate dimensions to maintain aspect ratio
+                const maxWidth = 120; // Leave some margin
+                const scale = maxWidth / img.width;
+                const width = img.width * scale;
+                const height = img.height * scale;
+                
+                // Center the logo
+                const x = (160 - width) / 2;
+                const y = (80 - height) / 2;
+                
+                ctx.globalAlpha = opacity;
+                ctx.drawImage(img, x, y, width, height);
+                ctx.globalAlpha = 1;
+            },
+            led: { state: 'on', color: 'white' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Power On") {
+                        currentState.draw(ctx, frame++);
+                        if (frame < 240) { // Continue animation until fade is complete (4 seconds)
+                            requestAnimationFrame(animate);
+                        } else {
+                            // After fade in completes, move to welcome screen
+                            currentFlow = 'welcome';
+                            currentStateIndex = 0;
+                            updateDisplay();
+                        }
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Shutdown",
+            explanation: "Press and hold the power button to initiate shutdown.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'left';
+                
+                if (isShuttingDown) {
+                    const elapsedTime = (Date.now() - shutdownStartTime) / 1000;
+                    const remainingTime = Math.max(0, 2 - elapsedTime);
+                    
+                    ctx.fillText('Shutting down', 10, 30);
+                    ctx.fillText(Math.ceil(remainingTime), 10, 50);
+                } else {
+                    ctx.fillText('Press and hold', 10, 30);
+                    ctx.fillText('power button', 10, 50);
+                    ctx.fillText('to shutdown', 10, 70);
+                }
+                
+                drawBattery(ctx, 85);
+                drawPowerButtonAnimation(ctx, frame);
+            },
+            led: { state: 'on', color: 'white' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Shutdown") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Shutdown Complete",
+            explanation: "Device has been powered off.",
+            draw: (ctx, frame) => {
+                // Calculate fade out opacity
+                const fadeDuration = 30; // frames for fade out
+                const opacity = Math.max(0, 1 - (frame / fadeDuration));
+                
+                // Clear canvas
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw text with fading opacity
+                ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('Device', 80, 30);
+                ctx.fillText('Powered Off', 80, 50);
+            },
+            led: { state: 'off', color: 'none' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Shutdown Complete") {
+                        currentState.draw(ctx, frame++);
+                        if (frame < 30) { // Continue animation until fade is complete
+                            requestAnimationFrame(animate);
+                        } else {
+                            // Return to off state
+                            currentStateIndex = 0;
+                            updateDisplay();
+                        }
+                    }
+                };
+                animate();
+            }
+        }
+    ],
     welcome: [
         {
             title: "Welcome Screen",
@@ -97,7 +238,7 @@ const flows = {
                 ctx.font = '12px monospace';
                 ctx.fillText('> Settings', 10, 30);
                 ctx.fillText('  Status', 10, 50);
-                ctx.fillText('  Connect', 10, 70);
+                ctx.fillText('  Power Off', 10, 70);
                 drawBattery(ctx, 85);
             },
             led: { state: 'on', color: 'white' }
@@ -189,7 +330,7 @@ const flows = {
                     }
                 });
 
-                // Set the animation color to white
+                // Set the animation color to white and control duration
                 animation.addEventListener('DOMLoaded', () => {
                     const svgElement = lottieContainer.querySelector('svg');
                     if (svgElement) {
@@ -202,6 +343,8 @@ const flows = {
                             path.style.stroke = '#fff';
                         });
                     }
+                    // Set animation speed to match breathing LED (2 seconds per cycle)
+                    animation.setSpeed(0.8); // Makes the animation take 2 seconds per cycle
                     animation.play();
                 });
 
@@ -452,135 +595,6 @@ const flows = {
                 };
             }
         }
-    ],
-    powerDown: [
-        {
-            title: "Power Button Press",
-            explanation: "Press and hold the power button to initiate shutdown.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'left';
-                
-                if (isShuttingDown) {
-                    const elapsedTime = (Date.now() - shutdownStartTime) / 1000;
-                    const remainingTime = Math.max(0, 2 - elapsedTime);
-                    
-                    ctx.fillText('Shutting down', 10, 30);
-                    ctx.fillText(Math.ceil(remainingTime), 10, 50);
-                } else {
-                    ctx.fillText('Press and hold', 10, 30);
-                    ctx.fillText('power button', 10, 50);
-                    ctx.fillText('to shutdown', 10, 70);
-                }
-                
-                drawBattery(ctx, 85);
-                drawPowerButtonAnimation(ctx, frame);
-            },
-            led: { state: 'on', color: 'white' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Power Button Press") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Shutdown Complete",
-            explanation: "Device has been powered off.",
-            draw: (ctx, frame) => {
-                // Calculate fade out opacity
-                const fadeDuration = 30; // frames for fade out
-                const opacity = Math.max(0, 1 - (frame / fadeDuration));
-                
-                // Clear canvas
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Draw text with fading opacity
-                ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText('Device', 80, 30);
-                ctx.fillText('Powered Off', 80, 50);
-            },
-            led: { state: 'off', color: 'none' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Shutdown Complete") {
-                        currentState.draw(ctx, frame++);
-                        if (frame < 30) { // Continue animation until fade is complete
-                            requestAnimationFrame(animate);
-                        }
-                    }
-                };
-                animate();
-            }
-        }
-    ],
-    powerOn: [
-        {
-            title: "Power On",
-            explanation: "Device is powering on with logo fade in.",
-            draw: (ctx, frame) => {
-                // Calculate fade in opacity
-                const fadeDuration = 240; // 4 seconds at 60fps
-                const opacity = Math.min(1, frame / fadeDuration);
-                
-                // Clear canvas
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Draw DS logo with fading opacity
-                const img = new Image();
-                img.src = 'DS LOGO.png';
-                
-                // Calculate dimensions to maintain aspect ratio
-                const maxWidth = 120; // Leave some margin
-                const scale = maxWidth / img.width;
-                const width = img.width * scale;
-                const height = img.height * scale;
-                
-                // Center the logo
-                const x = (160 - width) / 2;
-                const y = (80 - height) / 2;
-                
-                ctx.globalAlpha = opacity;
-                ctx.drawImage(img, x, y, width, height);
-                ctx.globalAlpha = 1;
-            },
-            led: { state: 'on', color: 'white' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Power On") {
-                        currentState.draw(ctx, frame++);
-                        if (frame < 240) { // Continue animation until fade is complete (4 seconds)
-                            requestAnimationFrame(animate);
-                        } else {
-                            // After fade in completes, move to welcome screen
-                            currentFlow = 'welcome';
-                            currentStateIndex = 0;
-                            updateDisplay();
-                        }
-                    }
-                };
-                animate();
-            }
-        }
     ]
 };
 
@@ -588,7 +602,7 @@ const flows = {
 const canvas = document.getElementById('lcdCanvas');
 const ctx = canvas.getContext('2d');
 let currentStateIndex = 0;
-let currentFlow = 'welcome';
+let currentFlow = 'power'; // Set initial flow to power
 let currentAnimation = null;
 
 // Navigation elements
@@ -683,15 +697,24 @@ let shutdownStartTime = 0;
 let countdownInterval = null;
 let isPoweredOff = true; // Track power state
 
+function startPowerOn() {
+    if (!isPoweredOff) return; // Only power on if currently off
+    
+    isPoweredOff = false;
+    currentFlow = 'power';
+    currentStateIndex = 1; // Move to power on animation state
+    updateDisplay();
+}
+
 function startShutdownCountdown() {
     if (isShuttingDown) return; // Prevent multiple triggers
     
     isShuttingDown = true;
     shutdownStartTime = Date.now();
     
-    // Switch to power down flow
-    currentFlow = 'powerDown';
-    currentStateIndex = 0;
+    // Switch to shutdown state
+    currentFlow = 'power';
+    currentStateIndex = 2; // Move to shutdown state
     updateDisplay();
     
     // Start countdown animation
@@ -702,20 +725,11 @@ function startShutdownCountdown() {
         if (remainingTime <= 0) {
             // Complete shutdown
             clearInterval(countdownInterval);
-            currentStateIndex = 1; // Move to shutdown complete state
+            currentStateIndex = 3; // Move to shutdown complete state
             updateDisplay();
             isPoweredOff = true; // Set power state to off
         }
     }, 50); // Update every 50ms for smooth animation
-}
-
-function startPowerOn() {
-    if (!isPoweredOff) return; // Only power on if currently off
-    
-    isPoweredOff = false;
-    currentFlow = 'powerOn';
-    currentStateIndex = 0;
-    updateDisplay();
 }
 
 function cancelShutdown() {
@@ -725,7 +739,7 @@ function cancelShutdown() {
     }
     isShuttingDown = false;
     
-    // Return to previous flow
+    // Return to welcome screen
     currentFlow = 'welcome';
     currentStateIndex = 0;
     updateDisplay();
