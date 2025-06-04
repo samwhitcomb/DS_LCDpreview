@@ -211,9 +211,41 @@ body {
     color: #ffffff;
 }
 
+.led-light.blue {
+    background-color: #007bff;
+    color: #007bff;
+}
+
+.led-light.breathing {
+    animation: breathing 2s ease-in-out infinite;
+    box-shadow: 0 0 10px currentColor;
+}
+
+.led-light.flash {
+    animation: flash 0.5s ease-in-out infinite;
+}
+
 @keyframes blink {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.3; }
+}
+
+@keyframes breathing {
+    0%, 100% { 
+        opacity: 0.3;
+        box-shadow: 0 0 5px currentColor;
+    }
+    50% { 
+        opacity: 1;
+        box-shadow: 0 0 15px currentColor;
+    }
+}
+
+@keyframes flash {
+    0%, 100% { opacity: 1; }
+    25% { opacity: 0.2; }
+    50% { opacity: 1; }
+    75% { opacity: 0.2; }
 }
 
 .led-controls {
@@ -250,4 +282,21 @@ body {
     outline: none;
     border-color: #007bff;
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.power-button {
+    position: absolute;
+    width: 10px;
+    height: 80px;
+    background-color: #000;
+    opacity: 0.3;
+    bottom: 110px;
+    right: 37px;
+    z-index: 2;
+    transition: opacity 0.2s ease;
+    cursor: pointer;
+}
+
+.power-button:active {
+    opacity: 0.8;
 } 
