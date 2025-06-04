@@ -1,0 +1,253 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #f5f5f5;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    display: flex;
+    gap: 4rem;
+    padding: 3rem;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.device-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-right: 2rem;
+    border-right: 1px solid #eee;
+    width: 400px;
+}
+
+.device-image {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.device-bg {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.lcd-display {
+    position: absolute;
+    top: 70%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+    border: 1px solid #131313;
+    transform-origin: center center;
+    background-color: #000;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+#lcdCanvas {
+    background-color: #000;
+    image-rendering: pixelated;
+    width: 160px;
+    height: 80px;
+    display: block;
+}
+
+.side-panel {
+    width: 350px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+}
+
+.panel-content {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.panel-content h2 {
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.navigation-controls {
+    display: flex;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.nav-button {
+    flex: 1;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 4px;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 1rem;
+}
+
+.nav-button:hover {
+    background-color: #0056b3;
+}
+
+.nav-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.explanation-box {
+    background-color: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.explanation-box h3 {
+    color: #2c3e50;
+    margin-bottom: 0.75rem;
+}
+
+.explanation-box p {
+    color: #666;
+    line-height: 1.5;
+}
+
+.step-indicator {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #666;
+    padding: 0.5rem;
+    background-color: white;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.flow-selector {
+    margin-bottom: 1rem;
+}
+
+.flow-selector label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.flow-select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+    font-size: 1rem;
+    color: #2c3e50;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.flow-select:hover {
+    border-color: #007bff;
+}
+
+.flow-select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.led-light {
+    position: absolute;
+    width: 80px;
+    height: 5px;
+    border-radius: 2px;
+    background-color: #333;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+    top: 79%;
+    right: 40%;
+    transition: background-color 0.3s ease;
+}
+
+.led-light.on {
+    box-shadow: 0 0 10px currentColor;
+}
+
+.led-light.blink {
+    animation: blink 1s infinite;
+}
+
+.led-light.green {
+    background-color: #00ff00;
+    color: #00ff00;
+}
+
+.led-light.red {
+    background-color: #ff0000;
+    color: #ff0000;
+}
+
+.led-light.yellow {
+    background-color: #ffff00;
+    color: #ffff00;
+}
+
+.led-light.white {
+    background-color: #ffffff;
+    color: #ffffff;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.led-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.led-controls label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.led-select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+    font-size: 1rem;
+    color: #2c3e50;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.led-select:hover {
+    border-color: #007bff;
+}
+
+.led-select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+} 
