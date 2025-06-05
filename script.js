@@ -1,3 +1,16 @@
+// Add these constants at the top of the file
+const TRAY_POSITION = {
+    x: 110,  // Aligned with battery
+    y: 10,    // Same y as battery
+    size: 10 // Same height as battery
+};
+
+const CENTER_POSITION = {
+    x: 80,
+    y: 55,
+    size: 30
+};
+
 // Battery drawing function
 function drawBattery(ctx, level) {
     const x = 130;  // Position from right
@@ -71,21 +84,22 @@ function drawShutdownCountdown(ctx, remainingTime) {
 }
 
 // WiFi status drawing function
-function drawWifiStatus(ctx, status, frame) {
-    const x = 100;  // Position from right (next to battery)
-    const y = 5;    // Position from top
-    const size = 10; // Same size as battery
+function drawWifiStatus(ctx, status, frame, isFullHeight = false) {
+    const size = isFullHeight ? CENTER_POSITION.size : TRAY_POSITION.size;
+    const x = isFullHeight ? CENTER_POSITION.x - size/2 : TRAY_POSITION.x - size/2;
+    const y = isFullHeight ? CENTER_POSITION.y - size/2 : TRAY_POSITION.y - size/2;
     
     ctx.save();
+    ctx.translate(x, y);
     
     switch(status) {
         case 'searching':
             // Draw searching animation
             const angle = (frame * 0.1) % (Math.PI * 2);
             ctx.beginPath();
-            ctx.arc(x + size/2, y + size/2, size/2, angle, angle + Math.PI * 1.5);
+            ctx.arc(size/2, size/2, size/2, angle, angle + Math.PI * 1.5);
             ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = isFullHeight ? 2 : 1;
             ctx.stroke();
             break;
             
@@ -93,32 +107,34 @@ function drawWifiStatus(ctx, status, frame) {
             // Draw connecting animation (pulsing)
             const scale = 0.8 + Math.sin(frame * 0.1) * 0.2;
             ctx.beginPath();
-            ctx.arc(x + size/2, y + size/2, (size/2) * scale, 0, Math.PI * 2);
+            ctx.arc(size/2, size/2, (size/2) * scale, 0, Math.PI * 2);
             ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = isFullHeight ? 2 : 1;
             ctx.stroke();
             break;
             
         case 'connected':
             // Draw connected symbol
             ctx.beginPath();
-            ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI * 2);
+            ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
             ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = isFullHeight ? 2 : 1;
             ctx.stroke();
             // Draw check mark
             ctx.beginPath();
-            ctx.moveTo(x + size/3, y + size/2);
-            ctx.lineTo(x + size/2, y + size * 2/3);
-            ctx.lineTo(x + size * 2/3, y + size/3);
-            ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 1;
+            ctx.moveTo(size/3, size/2);
+            ctx.lineTo(size/2, size * 2/3);
+            ctx.lineTo(size * 2/3, size/3);
             ctx.stroke();
             break;
     }
     
     ctx.restore();
 }
+
+// Add charger detection
+let isChargerConnected = false;
+let updateProgress = 0;
 
 // Flow definitions
 const flows = {
@@ -172,7 +188,7 @@ const flows = {
                 
                 // Center the logo
                 const x = (160 - width) / 2;
-                const y = (80 - height) / 2;
+                const y = ((80 - height) / 2)+10;
                 
                 ctx.globalAlpha = opacity;
                 ctx.drawImage(img, x, y, width, height);
@@ -204,33 +220,84 @@ const flows = {
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'center';
                 
-                // Draw status message based on connection state
-                if (connectionState === 'searching') {
-                    ctx.fillText('Searching for', 80, 35+5);
-                    ctx.fillText('connection...', 80, 55+5);
-                } else if (connectionState === 'connecting') {
-                    ctx.fillText('Connecting to', 80, 35+5);
-                    ctx.fillText('network...', 80, 55+5);
-                } else if (connectionState === 'connected') {
-                    // Calculate fade out opacity for connected message
-                    const fadeStart = 600; // When connection is established
-                    const fadeDuration = 100; // 1 second fade
-                    const opacity = Math.max(0, 1 - ((frame - fadeStart) / fadeDuration));
-                    
-                    if (opacity > 0) {
-                        ctx.globalAlpha = opacity;
-                        ctx.fillText('Connected to', 80, 35+5);
-                        ctx.fillText('network', 80, 55+5);
-                        ctx.globalAlpha = 1;
-                    }
-                }
+                // Calculate transition progress
+                const transitionStart = 540; // When connection is established
+                const transitionDuration = 30; // 1 second transition
+                const transitionProgress = Math.min(1, Math.max(0, (frame - transitionStart) / transitionDuration));
                 
+                // Draw battery (always in tray position)
                 drawBattery(ctx, 85);
-                drawWifiStatus(ctx, connectionState || 'searching', frame);
+                
+                // Draw WiFi status with minimizing animation
+                if (connectionState === 'connected' && transitionProgress < 1) {
+                    // Calculate positions for minimizing animation
+                    const startSize = 30;
+                    const endSize = TRAY_POSITION.size;
+                    
+                    // Center positions (accounting for size)
+                    const startX = 80 - startSize/2;  // Center of screen
+                    const startY = 40 - startSize/2;  // Center of screen
+                    const endX = TRAY_POSITION.x - endSize/2;     // Tray position
+                    const endY = TRAY_POSITION.y - endSize/2;     // Tray position
+                    
+                    // Interpolate position and size
+                    const currentSize = startSize + (endSize - startSize) * transitionProgress;
+                    const currentX = startX + (endX - startX) * transitionProgress;
+                    const currentY = startY + (endY - startY) * transitionProgress;
+                    
+                    // Draw the minimizing animation
+                    ctx.save();
+                    ctx.translate(currentX, currentY);
+                    ctx.scale(currentSize/startSize, currentSize/startSize);
+                    
+                    // Draw the connected symbol
+                    ctx.beginPath();
+                    ctx.arc(startSize/2, startSize/2, startSize/2, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#00ff00';
+                    ctx.lineWidth = 2 * (startSize/currentSize);
+                    ctx.stroke();
+                    
+                    // Draw check mark
+                    ctx.beginPath();
+                    ctx.moveTo(startSize/3, startSize/2);
+                    ctx.lineTo(startSize/2, startSize * 2/3);
+                    ctx.lineTo(startSize * 2/3, startSize/3);
+                    ctx.stroke();
+                    ctx.restore();
+                } else {
+                    // Draw appropriate version based on state
+                    const isFullHeight = connectionState !== 'connected';
+                    drawWifiStatus(ctx, connectionState, frame, isFullHeight);
+                }
+
+                // Draw subtle status text
+                ctx.globalAlpha = 0.5;
+                ctx.fillStyle = '#fff'; // White text
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'left';
+                
+                if (connectionState !== 'connected' || transitionProgress < 1) {
+                    // Full height mode text
+                    const textOpacity = connectionState === 'connected' ? 1 - transitionProgress : 0.4;
+                    ctx.globalAlpha = textOpacity;
+                    
+                    switch(connectionState) {
+                        case 'searching':
+                            ctx.fillText('Searching', 10, 15);
+                            break;
+                        case 'connecting':
+                            ctx.fillText('Connecting', 10, 15);
+                            break;
+                        case 'connected':
+                            ctx.fillText('Connected', 10, 15);
+                            break;
+                    }
+                } else {
+                    // Tray mode text (when connected)
+                    ctx.fillText('Connected', 10, 15);
+                }
+                ctx.globalAlpha = 1;
             },
             led: { state: 'breathing', color: 'blue' },
             onEnter: () => {
@@ -247,7 +314,7 @@ const flows = {
                         if (connectionState === 'searching' || connectionState === 'connecting') {
                             currentState.led = { state: 'breathing', color: 'blue' };
                         } else if (connectionState === 'connected') {
-                            if (frame >= 700) { // Wait for fade out to complete (800 + 200 frames)
+                            if (frame >= 640) { // Wait for transition to complete
                                 // Transition to Fully On state
                                 currentStateIndex = 3; // Move to Fully On state
                                 updateDisplay();
@@ -578,135 +645,232 @@ const flows = {
             led: { state: 'on', color: 'green' }
         }
     ],
-    error: [
+    firmwareUpdate: [
         {
-            title: "Error: Connection",
-            explanation: "Failed to establish connection. Error code: E001",
+            title: "Update Ready",
+            explanation: "Connect charger before starting firmware update. Once charger is connected we can remove the warnings",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
+                
+                // Calculate fade-in progress
+                const barHeight = Math.min(44, frame * 1);  // Grow over 88 frames
+                const isBarFull = barHeight >= 44;
+                const fadeStartFrame = 44;  // Start fading halfway through bar growth
+                const fadeDuration = 60;    // Longer fade duration (1 second)
+                const fadeProgress = isBarFull ? 
+                    1 : // Full opacity when bar is full
+                    Math.max(0, (frame - fadeStartFrame) / fadeDuration); // Gradual fade
+                
+                // Draw text on two lines (no fade)
                 ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
-                ctx.textAlign = 'left';
-                ctx.fillText('Error: Connection', 10, 20);
-                ctx.fillText('Code: E001', 10, 35);
-                ctx.fillText('Check network', 10, 50);
-                ctx.fillText('and try again', 10, 65);
+                ctx.textAlign = 'center';
+                ctx.fillText('Firmware update', 80, 45);
+                ctx.font = '10px monospace';  // Smaller font for subtext
+                ctx.fillText('connect power', 80, 65);
                 
-                drawBattery(ctx, 85);
+                // Draw power indicator on left
+                if (isChargerConnected) {
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(2, 8, 3, 44);  // 3px wide, 44px tall
+                } else {
+                    // Only start breathing after bar is full
+                    const pulseIntensity = isBarFull ? 
+                        Math.sin(frame * 0.05) * 0.3 + 0.7 :  // Breathing effect
+                        1;  // Solid when growing
+                    ctx.fillStyle = `rgba(255, 255, 255, ${pulseIntensity})`;
+                    ctx.fillRect(2, 40 - barHeight/2, 3, barHeight);
+                }
             },
-            led: { state: 'blink', color: 'red' }
+            led: { state: 'breathing', color: 'yellow' },
+            onEnter: () => {
+                // Check for charger connection
+                isChargerConnected = false; // This would be set by actual charger detection
+                
+                // Create and add power icon
+                const powerIcon = document.createElement('img');
+                powerIcon.src = 'Lotties/Icons/power lightning.svg';
+                powerIcon.style.position = 'absolute';
+                powerIcon.style.left = '8px';
+                powerIcon.style.top = '50%';
+                powerIcon.style.transform = 'translateY(-50%)';
+                powerIcon.style.width = '16px';
+                powerIcon.style.height = '16px';
+                powerIcon.style.filter = 'brightness(0) invert(1)'; // Make icon white
+                powerIcon.style.opacity = '0'; // Start invisible
+                
+                // Add to the LCD display
+                const lcdDisplay = document.querySelector('.lcd-display');
+                lcdDisplay.appendChild(powerIcon);
+                
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Update Ready") {
+                        currentState.draw(ctx, frame++);
+                        
+                        // Fade in the icon when bar is full
+                        const barHeight = Math.min(44, frame * 0.5);
+                        const isBarFull = barHeight >= 44;
+                        const fadeStartFrame = 44;
+                        const fadeDuration = 60;
+                        const fadeProgress = isBarFull ? 
+                            1 : // Full opacity when bar is full
+                            Math.max(0, (frame - fadeStartFrame) / fadeDuration); // Gradual fade
+                        powerIcon.style.opacity = fadeProgress;
+                        
+                        requestAnimationFrame(animate);
+                    } else {
+                        // Clean up when state changes
+                        powerIcon.remove();
+                    }
+                };
+                animate();
+            }
         },
         {
-            title: "Error: Sensor",
-            explanation: "Sensor calibration failed. Error code: E002",
+            title: "Updating",
+            explanation: "Firmware update in progress. Do not power off.",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
+                
+                // Draw progress bar background
+                ctx.fillStyle = '#333';
+                ctx.fillRect(20, 30, 120, 10);
+                
+                // Calculate real progress and time
+                const totalDuration = 30; // 30 seconds total
+                const elapsedTime = frame / 60; // Convert frames to seconds
+                const progress = Math.min(1, elapsedTime / totalDuration);
+                updateProgress = progress; // Update global progress
+                
+                // Animate progress bar
+                const barWidth = 120;
+                const segmentWidth = 10;
+                const segments = Math.floor(barWidth / segmentWidth);
+                const activeSegment = Math.floor((frame / 10) % segments);
+                
+                // Draw progress segments with animation
+                for (let i = 0; i < segments; i++) {
+                    const x = 20 + (i * segmentWidth);
+                    const isActive = i <= (progress * segments) || 
+                                   (i === activeSegment && i <= (progress * segments));
+                    
+                    // Add pulsing effect to active segments
+                    const pulseIntensity = isActive ? 
+                        Math.sin(frame * 0.1 + i * 0.5) * 0.3 + 0.7 :  // Breathing effect
+                        0.2;  // Dim when inactive
+                    
+                    ctx.fillStyle = `rgba(0, 255, 0, ${pulseIntensity})`;
+                    ctx.fillRect(x, 30, segmentWidth - 1, 10);
+                }
+                
+                // Draw percentage with fade effect
+                const percentageOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;  // Subtle pulse
+                ctx.fillStyle = `rgba(255, 255, 255, ${percentageOpacity})`;
                 ctx.font = '12px monospace';
-                ctx.textAlign = 'left';
-                ctx.fillText('Error: Sensor', 10, 20);
-                ctx.fillText('Code: E002', 10, 35);
-                ctx.fillText('Try recalibrating', 10, 50);
-                ctx.fillText('or reset device', 10, 65);
+                ctx.textAlign = 'center';
+                ctx.fillText(`${Math.round(progress * 100)}%`, 80, 25);
                 
-                drawBattery(ctx, 85);
+                // Calculate and draw time remaining
+                const remainingTime = Math.max(0, totalDuration - elapsedTime);
+                const minutes = Math.floor(remainingTime / 60);
+                const seconds = Math.floor(remainingTime % 60);
+                
+                ctx.font = '10px monospace';
+                ctx.fillText(`${minutes}:${seconds.toString().padStart(2, '0')} remaining`, 80, 55);
+                
+                // Draw warning with pulse
+                const warningOpacity = Math.sin(frame * 0.1) * 0.3 + 0.7;  // More noticeable pulse
+                ctx.fillStyle = `rgba(255, 255, 255, ${warningOpacity})`;
+                ctx.fillText('DO NOT POWER OFF', 80, 70);
+                
+                // Move to next state when complete
+                if (progress >= 1) {
+                    currentStateIndex = 2; // Move to Update Complete
+                    updateDisplay();
+                }
             },
-            led: { state: 'blink', color: 'red' }
-        },
-        {
-            title: "Error: System",
-            explanation: "System error detected. Error code: E003",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'left';
-                ctx.fillText('Error: System', 10, 20);
-                ctx.fillText('Code: E003', 10, 35);
-                ctx.fillText('Reset required', 10, 50);
-                ctx.fillText('Hold power 5s', 10, 65);
-                
-                drawBattery(ctx, 85);
-                drawPowerButtonAnimation(ctx, frame, true);
-            },
-            led: { state: 'blink', color: 'red' }
-        },
-        {
-            title: "Error: Memory",
-            explanation: "Memory error detected. Error code: E004",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'left';
-                ctx.fillText('Error: Memory', 10, 20);
-                ctx.fillText('Code: E004', 10, 35);
-                ctx.fillText('Reset required', 10, 50);
-                ctx.fillText('Hold power 5s', 10, 65);
-                
-                drawBattery(ctx, 85);
-                drawPowerButtonAnimation(ctx, frame, true);
-            },
-            led: { state: 'blink', color: 'red' }
-        },
-        {
-            title: "Error: Battery",
-            explanation: "Critical battery error. Error code: E005",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'left';
-                ctx.fillText('Error: Battery', 10, 20);
-                ctx.fillText('Code: E005', 10, 35);
-                ctx.fillText('Connect power', 10, 50);
-                ctx.fillText('immediately', 10, 65);
-                
-                drawBattery(ctx, 5);
-            },
-            led: { state: 'blink', color: 'red' }
-        },
-        {
-            title: "Reset Required",
-            explanation: "Device needs to be reset to resolve errors.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'left';
-                
-                // Animated countdown
-                const countdown = Math.max(0, 5 - Math.floor(frame / 60));
-                ctx.fillText('Reset in:', 10, 20);
-                ctx.fillText(`${countdown}s`, 10, 35);
-                ctx.fillText('Hold power', 10, 50);
-                ctx.fillText('to cancel', 10, 65);
-                
-                drawBattery(ctx, 85);
-                drawPowerButtonAnimation(ctx, frame, true);
-            },
-            led: { state: 'blink', color: 'red' },
+            led: { state: 'breathing', color: 'yellow' },
             onEnter: () => {
                 let frame = 0;
                 const animate = () => {
                     const currentStates = flows[currentFlow];
                     const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Reset Required") {
+                    if (currentState.title === "Updating") {
                         currentState.draw(ctx, frame++);
-                        if (frame < 300) { // 5 seconds
-                            requestAnimationFrame(animate);
-                        } else {
-                            // Reset to initial state
-                            currentFlow = 'power';
-                            currentStateIndex = 0;
-                            updateDisplay();
-                        }
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Update Complete",
+            explanation: "Firmware update completed successfully.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Calculate animation progress
+                const circleDuration = 30; // Half second for circle
+                const checkDuration = 20;  // Third of a second for checkmark
+                const textDuration = 30;   // Half second for text
+                const restartDuration = 60; // 1 second for restart message
+                
+                const circleProgress = Math.min(1, frame / circleDuration);
+                const checkProgress = Math.max(0, Math.min(1, (frame - circleDuration) / checkDuration));
+                const textProgress = Math.max(0, Math.min(1, (frame - circleDuration - checkDuration) / textDuration));
+                const restartProgress = Math.max(0, Math.min(1, (frame - circleDuration - checkDuration - textDuration) / restartDuration));
+                
+                // Draw animated circle
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(80, 30, 15, 0, Math.PI * 2 * circleProgress);
+                ctx.stroke();
+                
+                // Draw animated checkmark
+                if (checkProgress > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(70, 30);
+                    ctx.lineTo(75, 35);
+                    ctx.lineTo(90, 25);
+                    ctx.stroke();
+                }
+                
+                // Draw text with fade in
+                ctx.fillStyle = `rgba(255, 255, 255, ${textProgress})`;
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('Update Complete', 80, 60);
+                
+                // Draw restart message with fade in
+                if (restartProgress > 0) {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${restartProgress})`;
+                    ctx.font = '10px monospace';
+                    ctx.fillText('Device will restart', 80, 75);
+                }
+                
+                // Move to power on state after all animations complete
+                if (frame >= circleDuration + checkDuration + textDuration + restartDuration + 30) { // Add 0.5s delay
+                    currentFlow = "power";
+                    currentStateIndex = 1; // Move to Power On state
+                    updateDisplay();
+                }
+            },
+            led: { state: 'on', color: 'green' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Update Complete") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
                     }
                 };
                 animate();
@@ -955,6 +1119,16 @@ powerButton.addEventListener('touchcancel', (e) => {
         isPowerButtonPressed = false;
     }
 });
+
+// Add function to update progress from mobile
+function updateFirmwareProgress(progress) {
+    updateProgress = progress;
+    if (progress >= 1) {
+        // Move to complete state
+        currentStateIndex = 2;
+        updateDisplay();
+    }
+}
 
 // Initialize the display
 updateDisplay(); 
