@@ -61,30 +61,13 @@ function drawPowerButtonAnimation(ctx, frame, isOff = false) {
     ctx.stroke();
 }
 
-// Draw external power button arrow animation
-function drawExternalPowerArrow(frame) {
-    const arrowContainer = document.getElementById('powerArrowContainer');
-    if (!arrowContainer) return;
-
-    const arrow = arrowContainer.querySelector('.power-arrow');
-    if (!arrow) return;
-
-    // Calculate bounce effect
-    const bounceOffset = Math.abs(Math.sin(frame * 0.05)) * 10;
-    arrow.style.transform = `translateX(${bounceOffset}px)`;
-}
-
 // Shutdown countdown animation
 function drawShutdownCountdown(ctx, remainingTime) {
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, 160, 80);
     ctx.fillStyle = '#fff';
-    ctx.font = '16px monospace';
-    ctx.textAlign = 'center';
-    
-    // Draw countdown text with whole seconds
-    ctx.fillText('Shutting down', 80, 30);
-    ctx.fillText(Math.ceil(remainingTime), 80, 50);
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('Shutting down', 10, 30);
+    ctx.fillText(Math.ceil(remainingTime), 10, 50);
 }
 
 // WiFi status drawing function
@@ -151,7 +134,7 @@ const flows = {
             led: { state: 'off', color: 'none' },
             onEnter: () => {
                 // Reset all connection states
-                this.connectionState = 'searching';
+                connectionState = 'searching';
                 
                 let frame = 0;
                 const animate = () => {
@@ -226,13 +209,13 @@ const flows = {
                 ctx.textAlign = 'center';
                 
                 // Draw status message based on connection state
-                if (this.connectionState === 'searching') {
+                if (connectionState === 'searching') {
                     ctx.fillText('Searching for', 80, 35+5);
                     ctx.fillText('connection...', 80, 55+5);
-                } else if (this.connectionState === 'connecting') {
+                } else if (connectionState === 'connecting') {
                     ctx.fillText('Connecting to', 80, 35+5);
                     ctx.fillText('network...', 80, 55+5);
-                } else if (this.connectionState === 'connected') {
+                } else if (connectionState === 'connected') {
                     // Calculate fade out opacity for connected message
                     const fadeStart = 600; // When connection is established
                     const fadeDuration = 100; // 1 second fade
@@ -247,12 +230,12 @@ const flows = {
                 }
                 
                 drawBattery(ctx, 85);
-                drawWifiStatus(ctx, this.connectionState || 'searching', frame);
+                drawWifiStatus(ctx, connectionState || 'searching', frame);
             },
             led: { state: 'breathing', color: 'blue' },
             onEnter: () => {
                 let frame = 0;
-                this.connectionState = 'searching';
+                connectionState = 'searching';
                 
                 const animate = () => {
                     const currentStates = flows[currentFlow];
@@ -261,9 +244,9 @@ const flows = {
                         currentState.draw(ctx, frame++);
                         
                         // Update LED state based on connection state and frame
-                        if (this.connectionState === 'searching' || this.connectionState === 'connecting') {
+                        if (connectionState === 'searching' || connectionState === 'connecting') {
                             currentState.led = { state: 'breathing', color: 'blue' };
-                        } else if (this.connectionState === 'connected') {
+                        } else if (connectionState === 'connected') {
                             if (frame >= 700) { // Wait for fade out to complete (800 + 200 frames)
                                 // Transition to Fully On state
                                 currentStateIndex = 3; // Move to Fully On state
@@ -284,9 +267,9 @@ const flows = {
                         
                         // Simulate connection process
                         if (frame === 200) { // After 2 seconds
-                            this.connectionState = 'connecting';
+                            connectionState = 'connecting';
                         } else if (frame === 540) { // After 4 seconds
-                            this.connectionState = 'connected';
+                            connectionState = 'connected';
                         }
                         
                         requestAnimationFrame(animate);
@@ -387,358 +370,346 @@ const flows = {
             }
         }
     ],
-    welcome: [
+    binding: [
         {
-            title: "Welcome Screen",
-            explanation: "This is the initial welcome screen of the device.",
-            draw: (ctx) => {
+            title: "Binding Ready",
+            explanation: "Device is ready to be bound to your account. Press power button to toggle between QR code and serial number.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                if (showSerialNumber) {
+                    // Draw serial number
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '12px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Serial Number:', 80, 30);
+                    ctx.fillText('DS-2024-1234', 80, 50);
+                } else {
+                    // Draw full screen QR code
+                    const qr = qrcode(0, 'M');
+                    qr.addData('https://example.com/bind/device123');
+                    qr.make();
+                    
+                    const qrSize = 70; // Larger QR code
+                    const qrX = (160 - qrSize) / 2;
+                    const qrY = (80 - qrSize) / 2;
+                    
+                    const qrData = qr.createDataURL(4);
+                    const qrImg = new Image();
+                    qrImg.src = qrData;
+                    ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+                }
+                
+                drawBattery(ctx, 85);
+            },
+            led: { state: 'breathing', color: 'yellow' },
+            onEnter: () => {
+                showSerialNumber = false; // Initialize to show QR code
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Binding Ready") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Binding in Progress",
+            explanation: "Device is being bound to your account.",
+            draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
                 ctx.textAlign = 'center';
-                ctx.fillText('Device is ON', 80, 30);
-                ctx.fillText('Press power to turn off', 80, 50);
+                
+                // Animated dots
+                const dots = '.'.repeat(Math.floor(frame / 20) % 4);
+                ctx.fillText('Binding' + dots, 80, 40);
+                
                 drawBattery(ctx, 85);
-                drawPowerButtonAnimation(ctx, 0, false);
+            },
+            led: { state: 'breathing', color: 'yellow' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Binding in Progress") {
+                        currentState.draw(ctx, frame++);
+                        if (frame < 300) { // 5 seconds
+                            requestAnimationFrame(animate);
+                        } else {
+                            currentStateIndex = 2; // Move to Binding Complete
+                            updateDisplay();
+                        }
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Binding Complete",
+            explanation: "Device has been successfully bound to your account.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('Binding', 80, 30);
+                ctx.fillText('Complete!', 80, 50);
+                
+                drawBattery(ctx, 85);
             },
             led: { state: 'on', color: 'green' }
         }
     ],
-    connection: [
+    calibration: [
         {
-            title: "Standby",
-            explanation: "Device is in standby mode, ready to connect.",
-            draw: (ctx) => {
+            title: "Calibration Start",
+            explanation: "Device is ready to begin calibration.",
+            draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
-                ctx.fillText('Standby', 10, 30);
-                ctx.fillText('Ready to pair', 10, 50);
+                ctx.textAlign = 'center';
+                ctx.fillText('Calibration', 80, 30);
+                ctx.fillText('Starting...', 80, 50);
+                
                 drawBattery(ctx, 85);
             },
-            led: { state: 'on', color: 'blue' }
-        },
-        {
-            title: "Pairing Mode",
-            explanation: "Device is in pairing mode, waiting for app.",
-            draw: (ctx) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.fillText('Pairing Mode', 10, 30);
-                ctx.fillText('Active', 10, 50);
-                drawBattery(ctx, 85);
-            },
-            led: { state: 'breathing', color: 'blue' }
-        },
-        {
-            title: "Scanning",
-            explanation: "Device is scanning for nearby companion apps.",
-            draw: (ctx) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.fillText('Scanning', 10, 30);
-                ctx.fillText('for app...', 10, 50);
-                drawBattery(ctx, 85);
-            },
-            led: { state: 'breathing', color: 'blue' },
+            led: { state: 'breathing', color: 'yellow' },
             onEnter: () => {
-                // Clear the canvas first
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                // Create a container for the Lottie animation
-                const lottieContainer = document.createElement('div');
-                lottieContainer.style.position = 'absolute';
-                lottieContainer.style.top = '50%';
-                lottieContainer.style.left = '50%';
-                lottieContainer.style.transform = 'translate(-50%, -50%)';
-                lottieContainer.style.width = '80px';
-                lottieContainer.style.height = '80px';
-                lottieContainer.style.filter = 'brightness(0) invert(1)'; // This will make black elements white
-                canvas.parentElement.appendChild(lottieContainer);
-                
-                // Load and play the wifi animation
-                const animation = lottie.loadAnimation({
-                    container: lottieContainer,
-                    renderer: 'svg',
-                    loop: true,
-                    autoplay: true,
-                    path: 'Lotties/wifi.json',
-                    rendererSettings: {
-                        preserveAspectRatio: 'xMidYMid slice',
-                        progressiveLoad: true
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Calibration Start") {
+                        currentState.draw(ctx, frame++);
+                        if (frame < 60) { // 1 second
+                            requestAnimationFrame(animate);
+                        } else {
+                            currentStateIndex = 1; // Move to Calibrating
+                            updateDisplay();
+                        }
                     }
-                });
-
-                // Set the animation color to white and control duration
-                animation.addEventListener('DOMLoaded', () => {
-                    const svgElement = lottieContainer.querySelector('svg');
-                    if (svgElement) {
-                        svgElement.style.fill = '#fff';
-                        svgElement.style.stroke = '#fff';
-                        // Apply white color to all paths
-                        const paths = svgElement.querySelectorAll('path');
-                        paths.forEach(path => {
-                            path.style.fill = '#fff';
-                            path.style.stroke = '#fff';
-                        });
-                    }
-                    // Set animation speed to match breathing LED (2 seconds per cycle)
-                    animation.setSpeed(0.8); // Makes the animation take 2 seconds per cycle
-                    animation.play();
-                });
-
-                return {
-                    animation,
-                    container: lottieContainer
                 };
-            },
-            onExit: (data) => {
-                if (data) {
-                    if (data.animation) {
-                        data.animation.destroy();
-                    }
-                    if (data.container) {
-                        data.container.remove();
-                    }
-                }
+                animate();
             }
         },
         {
-            title: "App Found",
-            explanation: "Companion app detected. Waiting for user confirmation.",
-            draw: (ctx) => {
+            title: "Calibrating",
+            explanation: "Device is calibrating sensors and alignment.",
+            draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw calibration animation
+                const centerX = 80;
+                const centerY = 40;
+                const radius = 20;
+                const angle = (frame * 0.1) % (Math.PI * 2);
+                
+                // Draw rotating line
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(
+                    centerX + Math.cos(angle) * radius,
+                    centerY + Math.sin(angle) * radius
+                );
+                ctx.stroke();
+                
+                // Draw progress circle
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Draw progress text
+                const progress = Math.min(100, Math.floor((frame / 180) * 100));
                 ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
-                ctx.fillText('App Found!', 10, 30);
-                ctx.fillText('Confirm in app', 10, 50);
+                ctx.textAlign = 'center';
+                ctx.fillText(`${progress}%`, 80, 70);
+                
                 drawBattery(ctx, 85);
             },
-            led: { state: 'breathing', color: 'blue' }
+            led: { state: 'breathing', color: 'yellow' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Calibrating") {
+                        currentState.draw(ctx, frame++);
+                        if (frame < 180) { // 3 seconds
+                            requestAnimationFrame(animate);
+                        } else {
+                            currentStateIndex = 2; // Move to Calibration Complete
+                            updateDisplay();
+                        }
+                    }
+                };
+                animate();
+            }
         },
         {
-            title: "Connecting",
-            explanation: "Establishing secure connection with the companion app.",
-            draw: (ctx) => {
+            title: "Calibration Complete",
+            explanation: "Device calibration has been completed successfully.",
+            draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
-                ctx.fillText('Connecting', 10, 30);
-                ctx.fillText('to app...', 10, 50);
-                drawBattery(ctx, 85);
-            },
-            led: { state: 'breathing', color: 'blue' }
-        },
-        {
-            title: "Connected",
-            explanation: "Successfully connected to the companion app.",
-            draw: (ctx) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.fillText('Connected!', 10, 30);
-                ctx.fillText('App ready', 10, 50);
+                ctx.textAlign = 'center';
+                ctx.fillText('Calibration', 80, 30);
+                ctx.fillText('Complete!', 80, 50);
+                
                 drawBattery(ctx, 85);
             },
             led: { state: 'on', color: 'green' }
-        },
-        {
-            title: "Error",
-            explanation: "Connection failed. Please try again.",
-            draw: (ctx) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.fillText('Error', 10, 30);
-                ctx.fillText('Try again', 10, 50);
-                drawBattery(ctx, 85);
-            },
-            led: { state: 'blink', color: 'red' }
         }
     ],
     error: [
         {
-            title: "Connection Error",
-            explanation: "Failed to establish connection with the app.",
-            draw: (ctx) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.fillText('Error: Connection', 10, 30);
-                ctx.fillText('Failed', 10, 50);
-                ctx.fillText('Try again', 10, 70);
-                drawBattery(ctx, 85);
-            },
-            led: { state: 'blink', color: 'red' }
-        },
-        {
-            title: "Low Battery",
-            explanation: "Device battery is critically low.",
-            draw: (ctx) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.fillText('Error: Low Battery', 10, 30);
-                ctx.fillText('Please charge', 10, 50);
-                ctx.fillText('device', 10, 70);
-                drawBattery(ctx, 15);
-            },
-            led: { state: 'blink', color: 'red' }
-        },
-        {
-            title: "App Not Found",
-            explanation: "No compatible app detected nearby.",
-            draw: (ctx) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.fillText('Error: No App', 10, 30);
-                ctx.fillText('Found', 10, 50);
-                ctx.fillText('Check app status', 10, 70);
-                drawBattery(ctx, 85);
-            },
-            led: { state: 'blink', color: 'red' }
-        },
-        {
-            title: "Pairing Failed",
-            explanation: "Failed to pair with the app.",
+            title: "Error: Connection",
+            explanation: "Failed to establish connection. Error code: E001",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
                 ctx.textAlign = 'left';
-                ctx.fillText('Error: Pairing', 10, 30);
-                ctx.fillText('Failed', 10, 50);
-                ctx.fillText('Restart device', 10, 70);
+                ctx.fillText('Error: Connection', 10, 20);
+                ctx.fillText('Code: E001', 10, 35);
+                ctx.fillText('Check network', 10, 50);
+                ctx.fillText('and try again', 10, 65);
+                
                 drawBattery(ctx, 85);
-                drawPowerButtonAnimation(ctx, frame);
             },
-            led: { state: 'blink', color: 'red' },
-            onEnter: () => {
-                let frame = 0;
-                let isShuttingDown = false;
-                let shutdownStartTime = 0;
-                
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Pairing Failed") {
-                        if (isShuttingDown) {
-                            const elapsedTime = (Date.now() - shutdownStartTime) / 1000;
-                            const remainingTime = Math.max(0, 2 - elapsedTime);
-                            
-                            if (remainingTime > 0) {
-                                drawShutdownCountdown(ctx, remainingTime);
-                                requestAnimationFrame(animate);
-                            } else {
-                                // Reset to initial state after shutdown
-                                isShuttingDown = false;
-                                currentState.draw(ctx, frame++);
-                                requestAnimationFrame(animate);
-                            }
-                        } else {
-                            currentState.draw(ctx, frame++);
-                            requestAnimationFrame(animate);
-                        }
-                    }
-                };
-                
-                // Add power button press handler
-                const handlePowerPress = (e) => {
-                    if (e.type === 'mousedown' || e.type === 'touchstart') {
-                        isShuttingDown = true;
-                        shutdownStartTime = Date.now();
-                    }
-                };
-                
-                canvas.addEventListener('mousedown', handlePowerPress);
-                canvas.addEventListener('touchstart', handlePowerPress);
-                
-                animate();
-                
-                return () => {
-                    canvas.removeEventListener('mousedown', handlePowerPress);
-                    canvas.removeEventListener('touchstart', handlePowerPress);
-                };
-            }
+            led: { state: 'blink', color: 'red' }
         },
         {
-            title: "System Error",
-            explanation: "Internal system error occurred.",
+            title: "Error: Sensor",
+            explanation: "Sensor calibration failed. Error code: E002",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
                 ctx.textAlign = 'left';
-                ctx.fillText('System Error', 10, 30);
-                ctx.fillText('Code: E001', 10, 50);
-                ctx.fillText('Restart device', 10, 70);
+                ctx.fillText('Error: Sensor', 10, 20);
+                ctx.fillText('Code: E002', 10, 35);
+                ctx.fillText('Try recalibrating', 10, 50);
+                ctx.fillText('or reset device', 10, 65);
+                
                 drawBattery(ctx, 85);
-                drawPowerButtonAnimation(ctx, frame);
+            },
+            led: { state: 'blink', color: 'red' }
+        },
+        {
+            title: "Error: System",
+            explanation: "System error detected. Error code: E003",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'left';
+                ctx.fillText('Error: System', 10, 20);
+                ctx.fillText('Code: E003', 10, 35);
+                ctx.fillText('Reset required', 10, 50);
+                ctx.fillText('Hold power 5s', 10, 65);
+                
+                drawBattery(ctx, 85);
+                drawPowerButtonAnimation(ctx, frame, true);
+            },
+            led: { state: 'blink', color: 'red' }
+        },
+        {
+            title: "Error: Memory",
+            explanation: "Memory error detected. Error code: E004",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'left';
+                ctx.fillText('Error: Memory', 10, 20);
+                ctx.fillText('Code: E004', 10, 35);
+                ctx.fillText('Reset required', 10, 50);
+                ctx.fillText('Hold power 5s', 10, 65);
+                
+                drawBattery(ctx, 85);
+                drawPowerButtonAnimation(ctx, frame, true);
+            },
+            led: { state: 'blink', color: 'red' }
+        },
+        {
+            title: "Error: Battery",
+            explanation: "Critical battery error. Error code: E005",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'left';
+                ctx.fillText('Error: Battery', 10, 20);
+                ctx.fillText('Code: E005', 10, 35);
+                ctx.fillText('Connect power', 10, 50);
+                ctx.fillText('immediately', 10, 65);
+                
+                drawBattery(ctx, 5);
+            },
+            led: { state: 'blink', color: 'red' }
+        },
+        {
+            title: "Reset Required",
+            explanation: "Device needs to be reset to resolve errors.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'left';
+                
+                // Animated countdown
+                const countdown = Math.max(0, 5 - Math.floor(frame / 60));
+                ctx.fillText('Reset in:', 10, 20);
+                ctx.fillText(`${countdown}s`, 10, 35);
+                ctx.fillText('Hold power', 10, 50);
+                ctx.fillText('to cancel', 10, 65);
+                
+                drawBattery(ctx, 85);
+                drawPowerButtonAnimation(ctx, frame, true);
             },
             led: { state: 'blink', color: 'red' },
             onEnter: () => {
                 let frame = 0;
-                let isShuttingDown = false;
-                let shutdownStartTime = 0;
-                
                 const animate = () => {
                     const currentStates = flows[currentFlow];
                     const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "System Error") {
-                        if (isShuttingDown) {
-                            const elapsedTime = (Date.now() - shutdownStartTime) / 1000;
-                            const remainingTime = Math.max(0, 2 - elapsedTime);
-                            
-                            if (remainingTime > 0) {
-                                drawShutdownCountdown(ctx, remainingTime);
-                                requestAnimationFrame(animate);
-                            } else {
-                                // Reset to initial state after shutdown
-                                isShuttingDown = false;
-                                currentState.draw(ctx, frame++);
-                                requestAnimationFrame(animate);
-                            }
-                        } else {
-                            currentState.draw(ctx, frame++);
+                    if (currentState.title === "Reset Required") {
+                        currentState.draw(ctx, frame++);
+                        if (frame < 300) { // 5 seconds
                             requestAnimationFrame(animate);
+                        } else {
+                            // Reset to initial state
+                            currentFlow = 'power';
+                            currentStateIndex = 0;
+                            updateDisplay();
                         }
                     }
                 };
-                
-                // Add power button press handler
-                const handlePowerPress = (e) => {
-                    if (e.type === 'mousedown' || e.type === 'touchstart') {
-                        isShuttingDown = true;
-                        shutdownStartTime = Date.now();
-                    }
-                };
-                
-                canvas.addEventListener('mousedown', handlePowerPress);
-                canvas.addEventListener('touchstart', handlePowerPress);
-                
                 animate();
-                
-                return () => {
-                    canvas.removeEventListener('mousedown', handlePowerPress);
-                    canvas.removeEventListener('touchstart', handlePowerPress);
-                };
             }
         }
     ]
@@ -764,6 +735,8 @@ const ledLight = document.getElementById('ledLight');
 let powerButtonPressStartTime = 0;
 let isPowerButtonPressed = false;
 const SHUTDOWN_HOLD_TIME = 2000; // 2 seconds in milliseconds
+let showSerialNumber = false;
+let connectionState = 'searching';
 
 // Function to update the display
 function updateDisplay() {
@@ -791,7 +764,8 @@ function updateDisplay() {
     // Show/hide power arrow based on state
     const powerArrow = document.querySelector('.power-arrow-indicator');
     if (powerArrow) {
-        if (currentState.title === "Off" || currentState.title === "Fully On") {
+        if (currentState.title === "Off" || currentState.title === "Fully On" || 
+            (currentFlow === 'binding' && currentStateIndex === 0)) {
             powerArrow.style.display = 'block';
         } else {
             powerArrow.style.display = 'none';
@@ -907,9 +881,15 @@ function cancelShutdown() {
 
 // Modify the power button event handlers
 powerButton.addEventListener('mousedown', () => {
-    if (isPoweredOff) {
+    if (currentFlow === 'binding' && currentStateIndex === 0) {
+        // Toggle between QR code and serial number in binding ready state
+        showSerialNumber = !showSerialNumber;
+        const currentStates = flows[currentFlow];
+        const currentState = currentStates[currentStateIndex];
+        currentState.draw(ctx, 0); // Force immediate redraw
+    } else if (isPoweredOff) {
         startPowerOn();
-    } else {
+    } else if (currentFlow === 'power') {
         // Start tracking power button press
         powerButtonPressStartTime = Date.now();
         isPowerButtonPressed = true;
@@ -919,46 +899,42 @@ powerButton.addEventListener('mousedown', () => {
     }
 });
 
-powerButton.addEventListener('mouseup', () => {
-    if (isPowerButtonPressed) {
-        const pressDuration = Date.now() - powerButtonPressStartTime;
-        if (pressDuration < SHUTDOWN_HOLD_TIME) {
-            // If not held long enough, cancel shutdown
-            cancelShutdown();
-        }
-        isPowerButtonPressed = false;
-    }
-});
-
-powerButton.addEventListener('mouseleave', () => {
-    if (isPowerButtonPressed) {
-        const pressDuration = Date.now() - powerButtonPressStartTime;
-        if (pressDuration < SHUTDOWN_HOLD_TIME) {
-            // If not held long enough, cancel shutdown
-            cancelShutdown();
-        }
-        isPowerButtonPressed = false;
-    }
-});
-
-// Touch events
+// Update touch events similarly
 powerButton.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (isPoweredOff) {
+    if (currentFlow === 'binding' && currentStateIndex === 0) {
+        // Toggle between QR code and serial number in binding ready state
+        showSerialNumber = !showSerialNumber;
+        const currentStates = flows[currentFlow];
+        const currentState = currentStates[currentStateIndex];
+        currentState.draw(ctx, 0); // Force immediate redraw
+    } else if (isPoweredOff) {
         startPowerOn();
-    } else {
+    } else if (currentFlow === 'power') {
         // Start tracking power button press
         powerButtonPressStartTime = Date.now();
         isPowerButtonPressed = true;
         
         // Start shutdown countdown
         startShutdownCountdown();
+    }
+});
+
+// Also update mouseup and touchend to prevent shutdown in binding flow
+powerButton.addEventListener('mouseup', () => {
+    if (isPowerButtonPressed && currentFlow === 'power') {
+        const pressDuration = Date.now() - powerButtonPressStartTime;
+        if (pressDuration < SHUTDOWN_HOLD_TIME) {
+            // If not held long enough, cancel shutdown
+            cancelShutdown();
+        }
+        isPowerButtonPressed = false;
     }
 });
 
 powerButton.addEventListener('touchend', (e) => {
     e.preventDefault();
-    if (isPowerButtonPressed) {
+    if (isPowerButtonPressed && currentFlow === 'power') {
         const pressDuration = Date.now() - powerButtonPressStartTime;
         if (pressDuration < SHUTDOWN_HOLD_TIME) {
             // If not held long enough, cancel shutdown
@@ -970,7 +946,7 @@ powerButton.addEventListener('touchend', (e) => {
 
 powerButton.addEventListener('touchcancel', (e) => {
     e.preventDefault();
-    if (isPowerButtonPressed) {
+    if (isPowerButtonPressed && currentFlow === 'power') {
         const pressDuration = Date.now() - powerButtonPressStartTime;
         if (pressDuration < SHUTDOWN_HOLD_TIME) {
             // If not held long enough, cancel shutdown
