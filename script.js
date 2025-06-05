@@ -872,9 +872,8 @@ const flows = {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 
-                // Draw error icon with animation
-                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
-                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                // Draw error icon without animation
+                ctx.strokeStyle = '#ff0000';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.arc(80, 30, 15, 0, Math.PI * 2);
@@ -888,15 +887,14 @@ const flows = {
                 ctx.lineTo(70, 40);
                 ctx.stroke();
                 
-                // Draw text with fade
-                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
-                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                // Draw text without fade
+                ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
                 ctx.textAlign = 'center';
                 ctx.fillText('Charger', 80, 60);
                 ctx.fillText('Disconnected', 80, 75);
             },
-            led: { state: 'breathing', color: 'red' },
+            led: { state: 'breathing', color: 'red' }, // Non-critical: breathing
             onEnter: () => {
                 let frame = 0;
                 const animate = () => {
@@ -917,9 +915,8 @@ const flows = {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 
-                // Draw error icon with animation
-                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
-                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                // Draw error icon without animation
+                ctx.strokeStyle = '#ff0000';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.arc(80, 30, 15, 0, Math.PI * 2);
@@ -933,15 +930,14 @@ const flows = {
                 ctx.lineTo(70, 40);
                 ctx.stroke();
                 
-                // Draw text with fade
-                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
-                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                // Draw text without fade
+                ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
                 ctx.textAlign = 'center';
                 ctx.fillText('Update Failed', 80, 60);
                 ctx.fillText('Please try again', 80, 75);
             },
-            led: { state: 'breathing', color: 'red' },
+            led: { state: 'breathing', color: 'red' }, // Non-critical: breathing
             onEnter: () => {
                 let frame = 0;
                 const animate = () => {
@@ -964,9 +960,8 @@ const flows = {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 
-                // Draw error icon with animation
-                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
-                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                // Draw error icon without animation
+                ctx.strokeStyle = '#ff0000';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.arc(80, 30, 15, 0, Math.PI * 2);
@@ -980,15 +975,14 @@ const flows = {
                 ctx.lineTo(70, 40);
                 ctx.stroke();
                 
-                // Draw text with fade
-                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
-                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                // Draw text without fade
+                ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
                 ctx.textAlign = 'center';
                 ctx.fillText('Charger', 80, 60);
                 ctx.fillText('Disconnected', 80, 75);
             },
-            led: { state: 'breathing', color: 'red' },
+            led: { state: 'breathing', color: 'red' }, // Non-critical: breathing
             onEnter: () => {
                 let frame = 0;
                 const animate = () => {
@@ -1009,9 +1003,8 @@ const flows = {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 
-                // Draw error icon with animation
-                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
-                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                // Draw error icon without animation
+                ctx.strokeStyle = '#ff0000';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.arc(80, 30, 15, 0, Math.PI * 2);
@@ -1025,15 +1018,14 @@ const flows = {
                 ctx.lineTo(70, 40);
                 ctx.stroke();
                 
-                // Draw text with fade
-                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
-                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                // Draw text without fade
+                ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
                 ctx.textAlign = 'center';
                 ctx.fillText('Update Failed', 80, 60);
                 ctx.fillText('Please try again', 80, 75);
             },
-            led: { state: 'breathing', color: 'red' },
+            led: { state: 'breathing', color: 'red' }, // Non-critical: breathing
             onEnter: () => {
                 let frame = 0;
                 const animate = () => {
@@ -1054,9 +1046,8 @@ const flows = {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 
-                // Draw error icon with animation
-                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
-                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                // Draw error icon without animation
+                ctx.strokeStyle = '#ff0000';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.arc(80, 30, 15, 0, Math.PI * 2);
@@ -1071,16 +1062,15 @@ const flows = {
                 ctx.arc(80, 40, 1, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Draw text with fade
-                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
-                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                // Draw text without fade
+                ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
                 ctx.textAlign = 'center';
                 ctx.fillText('System Error', 80, 60);
                 ctx.font = '10px monospace';
                 ctx.fillText('Restart Required', 80, 75);
             },
-            led: { state: 'breathing', color: 'red' },
+            led: { state: 'breathing', color: 'red' }, // Non-critical: breathing
             onEnter: () => {
                 let frame = 0;
                 const animate = () => {
@@ -1101,26 +1091,23 @@ const flows = {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 
-                // Draw error icon with animation
-                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
-                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                // Draw error icon without animation
+                ctx.strokeStyle = '#ff0000';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.arc(80, 30, 15, 0, Math.PI * 2);
                 ctx.stroke();
                 
-                // Draw X with animation
-                const xScale = Math.sin(frame * 0.2) * 0.1 + 0.9;
+                // Draw X without animation
                 ctx.beginPath();
-                ctx.moveTo(70 * xScale, 20);
-                ctx.lineTo(90 * xScale, 40);
-                ctx.moveTo(90 * xScale, 20);
-                ctx.lineTo(70 * xScale, 40);
+                ctx.moveTo(70, 20);
+                ctx.lineTo(90, 40);
+                ctx.moveTo(90, 20);
+                ctx.lineTo(70, 40);
                 ctx.stroke();
                 
-                // Draw text with fade
-                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
-                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                // Draw text without fade
+                ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
                 ctx.textAlign = 'center';
                 ctx.fillText('Critical Error', 80, 60);
@@ -1134,7 +1121,7 @@ const flows = {
                     updateDisplay();
                 }
             },
-            led: { state: 'breathing', color: 'red' },
+            led: { state: 'blink', color: 'red' }, // Critical: hard blinking
             onEnter: () => {
                 let frame = 0;
                 const animate = () => {
@@ -1161,9 +1148,8 @@ const flows = {
                 ctx.textAlign = 'left';
                 ctx.fillText('E001', 10, 15);
                 
-                // Draw error icon with animation in center
-                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
-                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                // Draw error icon without animation
+                ctx.strokeStyle = '#ff0000';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.arc(80, 30, 15, 0, Math.PI * 2);
@@ -1178,16 +1164,15 @@ const flows = {
                 ctx.arc(80, 40, 1, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Draw text with fade
-                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
-                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                // Draw text without fade
+                ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
                 ctx.textAlign = 'center';
                 ctx.fillText('Hardware Error', 80, 60);
                 ctx.font = '10px monospace';
                 ctx.fillText('Contact Support', 80, 75);
             },
-            led: { state: 'breathing', color: 'red' },
+            led: { state: 'breathing', color: 'red' }, // Non-critical: breathing
             onEnter: () => {
                 let frame = 0;
                 const animate = () => {
@@ -1214,9 +1199,8 @@ const flows = {
                 ctx.textAlign = 'left';
                 ctx.fillText('E002', 10, 15);
                 
-                // Draw error icon with animation in center
-                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
-                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                // Draw error icon without animation
+                ctx.strokeStyle = '#ff0000';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.arc(80, 30, 15, 0, Math.PI * 2);
@@ -1231,9 +1215,8 @@ const flows = {
                 ctx.arc(80, 40, 1, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Draw text with fade
-                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
-                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                // Draw text without fade
+                ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
                 ctx.textAlign = 'center';
                 ctx.fillText('Memory Error', 80, 60);
@@ -1247,7 +1230,7 @@ const flows = {
                     updateDisplay();
                 }
             },
-            led: { state: 'breathing', color: 'red' },
+            led: { state: 'blink', color: 'red' }, // Critical: hard blinking
             onEnter: () => {
                 let frame = 0;
                 const animate = () => {
@@ -1274,9 +1257,8 @@ const flows = {
                 ctx.textAlign = 'left';
                 ctx.fillText('E003', 10, 15);
                 
-                // Draw error icon with animation in center
-                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
-                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                // Draw error icon without animation
+                ctx.strokeStyle = '#ff0000';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.arc(80, 30, 15, 0, Math.PI * 2);
@@ -1291,16 +1273,15 @@ const flows = {
                 ctx.arc(80, 40, 1, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Draw text with fade
-                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
-                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                // Draw text without fade
+                ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
                 ctx.textAlign = 'center';
                 ctx.fillText('Sensor Error', 80, 60);
                 ctx.font = '10px monospace';
                 ctx.fillText('Recalibration Needed', 80, 75);
             },
-            led: { state: 'breathing', color: 'red' },
+            led: { state: 'breathing', color: 'red' }, // Non-critical: breathing
             onEnter: () => {
                 let frame = 0;
                 const animate = () => {
@@ -1363,9 +1344,8 @@ const flows = {
                 ctx.arc(80, 40, 1, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Draw text with fade
-                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
-                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                // Draw text without fade
+                ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
                 ctx.textAlign = 'center';
                 ctx.fillText('Low Battery', 80, 60);
@@ -1413,9 +1393,8 @@ const flows = {
                 ctx.arc(80, 40, 1, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Draw text with faster fade
-                const textOpacity = Math.sin(frame * 0.1) * 0.3 + 0.7; // Faster fade
-                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                // Draw text without fade
+                ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
                 ctx.textAlign = 'center';
                 ctx.fillText('Critical Battery', 80, 60);
