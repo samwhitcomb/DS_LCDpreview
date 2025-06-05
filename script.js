@@ -1314,6 +1314,128 @@ const flows = {
                 animate();
             }
         }
+    ],
+    batteryStatus: [
+        {
+            title: "Battery Normal",
+            explanation: "Battery level is normal. Shows in tray position.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw battery in tray position
+                drawBattery(ctx, 85);
+                
+                // Draw subtle status text
+                ctx.fillStyle = '#fff';
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'left';
+                ctx.globalAlpha = 0.5;
+                ctx.fillText('Battery: 85%', 10, 15);
+                ctx.globalAlpha = 1;
+            },
+            led: { state: 'on', color: 'green' }
+        },
+        {
+            title: "Battery Low",
+            explanation: "Battery level is low. Shows warning with percentage.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw battery in tray position
+                drawBattery(ctx, 15);
+                
+                // Draw warning icon with animation
+                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
+                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(80, 30, 15, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Draw exclamation mark
+                ctx.beginPath();
+                ctx.moveTo(80, 20);
+                ctx.lineTo(80, 35);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(80, 40, 1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw text with fade
+                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
+                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('Low Battery', 80, 60);
+                ctx.font = '10px monospace';
+                ctx.fillText('15% Remaining', 80, 75);
+            },
+            led: { state: 'on', color: 'green' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Battery Low") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Battery Critical",
+            explanation: "Battery level is critical. Device will shutdown soon.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw battery in tray position
+                drawBattery(ctx, 5);
+                
+                // Draw warning icon with faster animation
+                const pulseIntensity = Math.sin(frame * 0.2) * 0.4 + 0.6; // Faster, more intense
+                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(80, 30, 15, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Draw exclamation mark
+                ctx.beginPath();
+                ctx.moveTo(80, 20);
+                ctx.lineTo(80, 35);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(80, 40, 1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw text with faster fade
+                const textOpacity = Math.sin(frame * 0.1) * 0.3 + 0.7; // Faster fade
+                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('Critical Battery', 80, 60);
+                ctx.font = '10px monospace';
+                ctx.fillText('Shutdown Imminent', 80, 75);
+            },
+            led: { state: 'on', color: 'green' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Battery Critical") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        }
     ]
 };
 
