@@ -661,10 +661,27 @@ const flows = {
                 ctx.font = '10px monospace';  // Smaller font for subtext
                 ctx.fillText('connect power', 80, 65);
                 
-                // Draw power indicator on left with continuous breathing
-                const pulseIntensity = Math.sin(frame * 0.05) * 0.3 + 0.7;  // Breathing effect
-                ctx.fillStyle = `rgba(255, 255, 255, ${pulseIntensity})`;
-                ctx.fillRect(2, 28, 3, 44);  // 3px wide, 44px tall
+                // First grow to full height (twice as fast), then start breathing with opacity
+                const growDuration = 30; // 0.5 seconds for grow animation (twice as fast)
+                const breathingDuration = 60; // 1 second for breathing cycle
+                
+                let height;
+                let opacity = 1;
+                
+                if (frame < growDuration) {
+                    // Growing phase (twice as fast)
+                    const growProgress = frame / growDuration;
+                    height = 44 * growProgress; // Grow from 0 to 44px
+                } else {
+                    // Breathing phase with opacity
+                    height = 44; // Full height
+                    const breathingProgress = (frame - growDuration) / breathingDuration;
+                    opacity = 0.3 + Math.sin(breathingProgress * Math.PI * 2) * 0.35; // Opacity between 0.3 and 0.65
+                }
+                
+                const y = 28 + (44 - height) / 2; // Center vertically
+                ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+                ctx.fillRect(2, y, 3, height);
             },
             led: { state: 'breathing', color: 'yellow' },
             onEnter: () => {
@@ -1179,8 +1196,8 @@ const flows = {
                     const currentStates = flows[currentFlow];
                     const currentState = currentStates[currentStateIndex];
                     if (currentState.title === "Error E001") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
+                                currentState.draw(ctx, frame++);
+                                requestAnimationFrame(animate);
                     }
                 };
                 animate();
@@ -1288,9 +1305,9 @@ const flows = {
                     const currentStates = flows[currentFlow];
                     const currentState = currentStates[currentStateIndex];
                     if (currentState.title === "Error E003") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
+                                currentState.draw(ctx, frame++);
+                                requestAnimationFrame(animate);
+                            }
                 };
                 animate();
             }
