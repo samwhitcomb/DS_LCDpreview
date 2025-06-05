@@ -447,8 +447,8 @@ const flows = {
                 
                 if (showSerialNumber) {
                     // Draw serial number
-                    ctx.fillStyle = '#fff';
-                    ctx.font = '12px monospace';
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px monospace';
                     ctx.textAlign = 'center';
                     ctx.fillText('Serial Number:', 80, 30);
                     ctx.fillText('DS-2024-1234', 80, 50);
@@ -653,16 +653,7 @@ const flows = {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 
-                // Calculate fade-in progress
-                const barHeight = Math.min(44, frame * 1);  // Grow over 88 frames
-                const isBarFull = barHeight >= 44;
-                const fadeStartFrame = 44;  // Start fading halfway through bar growth
-                const fadeDuration = 60;    // Longer fade duration (1 second)
-                const fadeProgress = isBarFull ? 
-                    1 : // Full opacity when bar is full
-                    Math.max(0, (frame - fadeStartFrame) / fadeDuration); // Gradual fade
-                
-                // Draw text on two lines (no fade)
+                // Draw text on two lines
                 ctx.fillStyle = '#fff';
                 ctx.font = '12px monospace';
                 ctx.textAlign = 'center';
@@ -670,18 +661,10 @@ const flows = {
                 ctx.font = '10px monospace';  // Smaller font for subtext
                 ctx.fillText('connect power', 80, 65);
                 
-                // Draw power indicator on left
-                if (isChargerConnected) {
-                    ctx.fillStyle = '#fff';
-                    ctx.fillRect(2, 8, 3, 44);  // 3px wide, 44px tall
-                } else {
-                    // Only start breathing after bar is full
-                    const pulseIntensity = isBarFull ? 
-                        Math.sin(frame * 0.05) * 0.3 + 0.7 :  // Breathing effect
-                        1;  // Solid when growing
-                    ctx.fillStyle = `rgba(255, 255, 255, ${pulseIntensity})`;
-                    ctx.fillRect(2, 40 - barHeight/2, 3, barHeight);
-                }
+                // Draw power indicator on left with continuous breathing
+                const pulseIntensity = Math.sin(frame * 0.05) * 0.3 + 0.7;  // Breathing effect
+                ctx.fillStyle = `rgba(255, 255, 255, ${pulseIntensity})`;
+                ctx.fillRect(2, 28, 3, 44);  // 3px wide, 44px tall
             },
             led: { state: 'breathing', color: 'yellow' },
             onEnter: () => {
@@ -692,13 +675,13 @@ const flows = {
                 const powerIcon = document.createElement('img');
                 powerIcon.src = 'Lotties/Icons/power lightning.svg';
                 powerIcon.style.position = 'absolute';
-                powerIcon.style.left = '8px';
-                powerIcon.style.top = '50%';
+                powerIcon.style.left = '5%';
+                powerIcon.style.bottom = '0%';
                 powerIcon.style.transform = 'translateY(-50%)';
                 powerIcon.style.width = '16px';
                 powerIcon.style.height = '16px';
                 powerIcon.style.filter = 'brightness(0) invert(1)'; // Make icon white
-                powerIcon.style.opacity = '0'; // Start invisible
+                powerIcon.style.opacity = '1'; // Start visible
                 
                 // Add to the LCD display
                 const lcdDisplay = document.querySelector('.lcd-display');
@@ -710,21 +693,12 @@ const flows = {
                     const currentState = currentStates[currentStateIndex];
                     if (currentState.title === "Update Ready") {
                         currentState.draw(ctx, frame++);
-                        
-                        // Fade in the icon when bar is full
-                        const barHeight = Math.min(44, frame * 0.5);
-                        const isBarFull = barHeight >= 44;
-                        const fadeStartFrame = 44;
-                        const fadeDuration = 60;
-                        const fadeProgress = isBarFull ? 
-                            1 : // Full opacity when bar is full
-                            Math.max(0, (frame - fadeStartFrame) / fadeDuration); // Gradual fade
-                        powerIcon.style.opacity = fadeProgress;
-                        
                         requestAnimationFrame(animate);
                     } else {
                         // Clean up when state changes
-                        powerIcon.remove();
+                        if (powerIcon && powerIcon.parentNode) {
+                            powerIcon.parentNode.removeChild(powerIcon);
+                        }
                     }
                 };
                 animate();
@@ -802,6 +776,21 @@ const flows = {
                     const currentState = currentStates[currentStateIndex];
                     if (currentState.title === "Updating") {
                         currentState.draw(ctx, frame++);
+                        
+                        // Simulate charger disconnect after 15 seconds
+                        if (frame === 900) { // 15 seconds at 60fps
+                            currentStateIndex = 3; // Move to Charger Disconnected state
+                            updateDisplay();
+                            return;
+                        }
+                        
+                        // Simulate update failure after 20 seconds
+                        if (frame === 1200) { // 20 seconds at 60fps
+                            currentStateIndex = 4; // Move to Update Failed state
+                            updateDisplay();
+                            return;
+                        }
+                        
                         requestAnimationFrame(animate);
                     }
                 };
@@ -869,6 +858,455 @@ const flows = {
                     const currentStates = flows[currentFlow];
                     const currentState = currentStates[currentStateIndex];
                     if (currentState.title === "Update Complete") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Charger Disconnected",
+            explanation: "Charger was disconnected during update. Please reconnect and try again.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw error icon with animation
+                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
+                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(80, 30, 15, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Draw X
+                ctx.beginPath();
+                ctx.moveTo(70, 20);
+                ctx.lineTo(90, 40);
+                ctx.moveTo(90, 20);
+                ctx.lineTo(70, 40);
+                ctx.stroke();
+                
+                // Draw text with fade
+                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
+                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('Charger', 80, 60);
+                ctx.fillText('Disconnected', 80, 75);
+            },
+            led: { state: 'breathing', color: 'red' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Charger Disconnected") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Update Failed",
+            explanation: "Firmware update failed. Please try again.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw error icon with animation
+                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
+                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(80, 30, 15, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Draw X
+                ctx.beginPath();
+                ctx.moveTo(70, 20);
+                ctx.lineTo(90, 40);
+                ctx.moveTo(90, 20);
+                ctx.lineTo(70, 40);
+                ctx.stroke();
+                
+                // Draw text with fade
+                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
+                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('Update Failed', 80, 60);
+                ctx.fillText('Please try again', 80, 75);
+            },
+            led: { state: 'breathing', color: 'red' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Update Failed") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        }
+    ],
+    errorStates: [
+        {
+            title: "Charger Disconnected",
+            explanation: "Charger was disconnected during update. Please reconnect and try again.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw error icon with animation
+                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
+                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(80, 30, 15, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Draw X
+                ctx.beginPath();
+                ctx.moveTo(70, 20);
+                ctx.lineTo(90, 40);
+                ctx.moveTo(90, 20);
+                ctx.lineTo(70, 40);
+                ctx.stroke();
+                
+                // Draw text with fade
+                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
+                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('Charger', 80, 60);
+                ctx.fillText('Disconnected', 80, 75);
+            },
+            led: { state: 'breathing', color: 'red' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Charger Disconnected") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Update Failed",
+            explanation: "Firmware update failed. Please try again.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw error icon with animation
+                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
+                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(80, 30, 15, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Draw X
+                ctx.beginPath();
+                ctx.moveTo(70, 20);
+                ctx.lineTo(90, 40);
+                ctx.moveTo(90, 20);
+                ctx.lineTo(70, 40);
+                ctx.stroke();
+                
+                // Draw text with fade
+                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
+                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('Update Failed', 80, 60);
+                ctx.fillText('Please try again', 80, 75);
+            },
+            led: { state: 'breathing', color: 'red' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Update Failed") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "System Error",
+            explanation: "A system error has occurred. Please restart the device.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw error icon with animation
+                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
+                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(80, 30, 15, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Draw exclamation mark
+                ctx.beginPath();
+                ctx.moveTo(80, 20);
+                ctx.lineTo(80, 35);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(80, 40, 1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw text with fade
+                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
+                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('System Error', 80, 60);
+                ctx.font = '10px monospace';
+                ctx.fillText('Restart Required', 80, 75);
+            },
+            led: { state: 'breathing', color: 'red' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "System Error") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Critical Error",
+            explanation: "A critical error has occurred. Device will restart automatically.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw error icon with animation
+                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
+                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(80, 30, 15, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Draw X with animation
+                const xScale = Math.sin(frame * 0.2) * 0.1 + 0.9;
+                ctx.beginPath();
+                ctx.moveTo(70 * xScale, 20);
+                ctx.lineTo(90 * xScale, 40);
+                ctx.moveTo(90 * xScale, 20);
+                ctx.lineTo(70 * xScale, 40);
+                ctx.stroke();
+                
+                // Draw text with fade
+                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
+                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('Critical Error', 80, 60);
+                ctx.font = '10px monospace';
+                ctx.fillText('Auto-Restarting...', 80, 75);
+                
+                // Simulate restart after 5 seconds
+                if (frame >= 300) { // 5 seconds at 60fps
+                    currentFlow = "power";
+                    currentStateIndex = 1; // Move to Power On state
+                    updateDisplay();
+                }
+            },
+            led: { state: 'breathing', color: 'red' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Critical Error") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Error E001",
+            explanation: "Hardware initialization error. Please contact support.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw error code in top left
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'left';
+                ctx.fillText('E001', 10, 15);
+                
+                // Draw error icon with animation in center
+                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
+                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(80, 30, 15, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Draw exclamation mark
+                ctx.beginPath();
+                ctx.moveTo(80, 20);
+                ctx.lineTo(80, 35);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(80, 40, 1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw text with fade
+                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
+                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('Hardware Error', 80, 60);
+                ctx.font = '10px monospace';
+                ctx.fillText('Contact Support', 80, 75);
+            },
+            led: { state: 'breathing', color: 'red' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Error E001") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Error E002",
+            explanation: "Memory corruption detected. Device will restart.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw error code in top left
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'left';
+                ctx.fillText('E002', 10, 15);
+                
+                // Draw error icon with animation in center
+                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
+                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(80, 30, 15, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Draw exclamation mark
+                ctx.beginPath();
+                ctx.moveTo(80, 20);
+                ctx.lineTo(80, 35);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(80, 40, 1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw text with fade
+                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
+                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('Memory Error', 80, 60);
+                ctx.font = '10px monospace';
+                ctx.fillText('Auto-Restarting...', 80, 75);
+                
+                // Simulate restart after 5 seconds
+                if (frame >= 300) { // 5 seconds at 60fps
+                    currentFlow = "power";
+                    currentStateIndex = 1; // Move to Power On state
+                    updateDisplay();
+                }
+            },
+            led: { state: 'breathing', color: 'red' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Error E002") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Error E003",
+            explanation: "Sensor calibration error. Please recalibrate.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw error code in top left
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'left';
+                ctx.fillText('E003', 10, 15);
+                
+                // Draw error icon with animation in center
+                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
+                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(80, 30, 15, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Draw exclamation mark
+                ctx.beginPath();
+                ctx.moveTo(80, 20);
+                ctx.lineTo(80, 35);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(80, 40, 1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw text with fade
+                const textOpacity = Math.sin(frame * 0.05) * 0.2 + 0.8;
+                ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('Sensor Error', 80, 60);
+                ctx.font = '10px monospace';
+                ctx.fillText('Recalibration Needed', 80, 75);
+            },
+            led: { state: 'breathing', color: 'red' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Error E003") {
                         currentState.draw(ctx, frame++);
                         requestAnimationFrame(animate);
                     }
