@@ -181,14 +181,14 @@ const flows = {
                 img.src = 'DS LOGO.png';
                 
                 // Calculate dimensions to maintain aspect ratio
-                const maxWidth = 120; // Leave some margin
+                const maxWidth = 150; // Leave some margin
                 const scale = maxWidth / img.width;
                 const width = img.width * scale;
                 const height = img.height * scale;
                 
                 // Center the logo
                 const x = (160 - width) / 2;
-                const y = ((80 - height) / 2)+10;
+                const y = ((80 - height) / 2);
                 
                 ctx.globalAlpha = opacity;
                 ctx.drawImage(img, x, y, width, height);
@@ -440,39 +440,46 @@ const flows = {
     binding: [
         {
             title: "Binding Ready",
-            explanation: "Device is ready to be bound to your account. Press power button to toggle between QR code and serial number.",
+            explanation: "Device is ready to be bound to your account.",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
-                
-                if (showSerialNumber) {
-                    // Draw serial number
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('Serial Number:', 80, 30);
-                    ctx.fillText('DS-2024-1234', 80, 50);
+
+                // Calculate QR height if loaded, else estimate a default height
+                let qrHeight = 0;
+                if (microQRImgLoaded) {
+                    const lcdWidth = 160;
+                    const drawWidth = lcdWidth;
+                    const scale = drawWidth / microQRImg.width;
+                    qrHeight = microQRImg.height * scale;
                 } else {
-                    // Draw full screen QR code
-                    const qr = qrcode(0, 'M');
-                    qr.addData('https://example.com/bind/device123');
-                    qr.make();
-                    
-                    const qrSize = 70; // Larger QR code
-                    const qrX = (160 - qrSize) / 2;
-                    const qrY = (80 - qrSize) / 2;
-                    
-                    const qrData = qr.createDataURL(4);
-                    const qrImg = new Image();
-                    qrImg.src = qrData;
-                    ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+                    // Estimate a default QR height (e.g., 40px) if not loaded
+                    qrHeight = 40;
                 }
-                
-                drawBattery(ctx, 85);
+                const serial = '124_DS';
+                const availableHeight = 70 - qrHeight;
+                let fontSize = Math.floor(availableHeight * 0.6);
+                if (fontSize < 16) fontSize = 16;
+                ctx.fillStyle = '#fff';
+                ctx.font = `${fontSize}px monospace`;
+                ctx.textAlign = 'center';
+                const textY = Math.floor((availableHeight + fontSize) / 2) - 0;
+                ctx.fillText(serial, 80, textY);
+
+                // Draw Micro QR.png pinned to the bottom, full width, if loaded
+                if (microQRImgLoaded) {
+                    const lcdWidth = 160;
+                    const drawWidth = lcdWidth;
+                    const scale = drawWidth / microQRImg.width;
+                    const drawHeight = microQRImg.height * scale;
+                    const x = 0;
+                    const y = 80 - drawHeight;
+                    ctx.drawImage(microQRImg, x, y, drawWidth, drawHeight);
+                }
             },
             led: { state: 'breathing', color: 'yellow' },
             onEnter: () => {
-                showSerialNumber = false; // Initialize to show QR code
+                showSerialNumber = false;
                 let frame = 0;
                 const animate = () => {
                     const currentStates = flows[currentFlow];
@@ -1432,6 +1439,218 @@ const flows = {
                 animate();
             }
         }
+    ],
+    testing: [
+        {
+            title: "Test Screen 1",
+            explanation: "This is a test screen for experiments.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#222';
+                ctx.fillRect(0, 0, 160, 80);
+                ctx.fillStyle = '#0f0';
+                ctx.font = '18px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('Testing Flow', 80, 40);
+                ctx.font = '12px monospace';
+                ctx.fillStyle = '#fff';
+                ctx.fillText('Add your tests here!', 80, 60);
+            },
+            led: { state: 'off', color: 'none' }
+        },
+        {
+            title: "Animated Battery",
+            explanation: "A large battery animating a charging sequence.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#111';
+                ctx.fillRect(0, 0, 160, 80);
+                // Animate battery level from 0 to 100% in a loop
+                const cycle = 2000; // slower animation
+                const percent = ((frame % cycle) / (cycle - 1)) * 100;
+                // Battery dimensions - reduced size
+                const x = 32;
+                const y = 5; // Sticky to top
+                const width = 90;
+                const height = 45; // Reduced height
+                const radius = 6; // Slightly reduced radius
+                // Draw battery outline with rounded corners
+                ctx.save();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + width - radius, y);
+                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                ctx.lineTo(x + width, y + height - radius);
+                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                ctx.lineTo(x + radius, y + height);
+                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+                ctx.stroke();
+                ctx.restore();
+                // Battery tip
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(x + width, y + height / 4, 8, height / 2);
+                // Battery fill with rounded corners
+                ctx.save();
+                // Fill area padding
+                const pad = 6;
+                ctx.beginPath();
+                ctx.moveTo(x + radius + pad, y + pad);
+                ctx.lineTo(x + pad + (width - 2 * pad) * (percent / 100), y + pad);
+                ctx.lineTo(x + pad + (width - 2 * pad) * (percent / 100), y + height - pad);
+                ctx.lineTo(x + radius + pad, y + height - pad);
+                ctx.quadraticCurveTo(x + pad, y + height - pad, x + pad, y + height - pad - radius);
+                ctx.lineTo(x + pad, y + pad + radius);
+                ctx.quadraticCurveTo(x + pad, y + pad, x + radius + pad, y + pad);
+                ctx.closePath();
+                ctx.clip();
+                // Fill color - now always white
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(x + pad, y + pad, (width - 2 * pad) * (percent / 100), height - 2 * pad);
+                // Shimmer effect
+                const shimmerWidth = 25;
+                const shimmerX = x + pad + ((frame * 2) % ((width - 2 * pad) + shimmerWidth)) - shimmerWidth;
+                const grad = ctx.createLinearGradient(shimmerX, 0, shimmerX + shimmerWidth, 0);
+                grad.addColorStop(0, 'rgba(255,255,255,0)');
+                grad.addColorStop(0.5, 'rgba(255,255,255,0.5)');
+                grad.addColorStop(1, 'rgba(255,255,255,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(x + pad, y + pad, (width - 2 * pad) * (percent / 100), height - 2 * pad);
+                ctx.restore();
+                // Percentage text - now at bottom
+                ctx.fillStyle = '#fff';
+                ctx.font = '16px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(Math.round(percent) + '%', 80, 75); // Positioned at bottom
+            },
+            led: { state: 'breathing', color: 'white' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Animated Battery") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Animated Battery 2",
+            explanation: "A large battery animating a charging sequence.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#111';
+                ctx.fillRect(0, 0, 160, 80);
+                // Animate battery level from 0 to 100% in a loop
+                const cycle = 2000; // slower animation
+                const percent = ((frame % cycle) / (cycle - 1)) * 100;
+                
+                // Draw charging indicator on the left
+                const indicatorWidth = 4;
+                const indicatorHeight = 45;
+                const indicatorX = 0;
+                const indicatorY = 17;
+                
+                // Draw vertical rectangle
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(indicatorX, indicatorY, indicatorWidth, indicatorHeight);
+                
+                // Lightning bolt configuration
+                const boltConfig = {
+                    x: indicatorX + 10,        // X position (distance from left edge)
+                    y: indicatorY + 10,       // Y position (distance from top)
+                    width: 14,                // Width of the bolt (matching SVG)
+                    height: 22,               // Height of the bolt (matching SVG)
+                    thickness: 1,             // Thickness of the bolt lines
+                    angle: 0,                 // Rotation angle in degrees
+                    color: '#fff'             // Color of the bolt
+                };
+                
+                // Draw lightning bolt
+                ctx.save();
+                ctx.fillStyle = boltConfig.color;
+                ctx.translate(boltConfig.x, boltConfig.y);
+                ctx.rotate(boltConfig.angle * Math.PI / 180);
+                
+                // Calculate bolt points based on config
+                const w = boltConfig.width;
+                const h = boltConfig.height;
+                
+                ctx.beginPath();
+                // Top right point
+                ctx.moveTo(w * 0.794, 0);
+                // Top left point
+                ctx.lineTo(w * 0.308, 0);
+                // Left middle point
+                ctx.lineTo(0, h * 0.526);
+                // Left bottom point
+                ctx.lineTo(w * 0.481, h * 0.526);
+                // Bottom left point
+                ctx.lineTo(w * 0.264, h);
+                // Bottom right point
+                ctx.lineTo(w, h * 0.383);
+                // Right middle point
+                ctx.lineTo(w * 0.481, h * 0.383);
+                // Close back to top right
+                ctx.lineTo(w * 0.794, 0);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+                
+                // Battery dimensions - 20% smaller and centered
+                const width = 72; // 90 * 0.8
+                const height = 36; // 45 * 0.8
+                const x = (160 - width) / 2; // Center horizontally
+                const y = (80 - height) / 2; // Center vertically
+                const radius = 5; // Slightly reduced radius
+                
+                // Draw battery outline with rounded corners
+                ctx.save();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + width - radius, y);
+                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                ctx.lineTo(x + width, y + height - radius);
+                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                ctx.lineTo(x + radius, y + height);
+                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+                ctx.stroke();
+                ctx.restore();
+                
+                // Battery tip
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(x + width, y + height / 4, 6, height / 2);
+                
+                // Percentage text inside battery
+                ctx.fillStyle = '#fff';
+                ctx.font = '18px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(Math.round(percent) + '%', x + width/2, y + height/2);
+            },
+            led: { state: 'breathing', color: 'white' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Animated Battery 2") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        }
     ]
 };
 
@@ -1457,6 +1676,12 @@ let isPowerButtonPressed = false;
 const SHUTDOWN_HOLD_TIME = 2000; // 2 seconds in milliseconds
 let showSerialNumber = false;
 let connectionState = 'searching';
+
+// Add at the top, after other state variables
+const microQRImg = new Image();
+microQRImg.src = 'Micro QR.png';
+let microQRImgLoaded = false;
+microQRImg.onload = function() { microQRImgLoaded = true; updateDisplay(); };
 
 // Function to update the display
 function updateDisplay() {
@@ -1685,6 +1910,28 @@ function updateFirmwareProgress(progress) {
         updateDisplay();
     }
 }
+
+// After flows object and before updateDisplay or any event listeners
+function toTitleCase(str) {
+    return str.replace(/([A-Z])/g, ' $1')
+        .replace(/^./, function(txt){ return txt.toUpperCase(); })
+        .replace(/\b\w/g, function(txt){ return txt.toUpperCase(); })
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .replace(/_/g, ' ');
+}
+
+function populateFlowSelect() {
+    flowSelect.innerHTML = '';
+    Object.keys(flows).forEach(key => {
+        const option = document.createElement('option');
+        option.value = key;
+        // Human-friendly label
+        option.textContent = toTitleCase(key);
+        flowSelect.appendChild(option);
+    });
+}
+
+populateFlowSelect();
 
 // Initialize the display
 updateDisplay(); 

@@ -15,7 +15,7 @@ body {
 
 .container {
     display: flex;
-    gap: 4rem;
+    gap: 5rem;
     padding: 3rem;
     background-color: white;
     border-radius: 12px;
@@ -65,15 +65,15 @@ body {
 }
 
 .side-panel {
-    width: 350px;
+    width: 550px;
     background-color: #f8f9fa;
-    border-radius: 8px;
+    border-radius: 15px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     flex-shrink: 0;
 }
 
 .panel-content {
-    padding: 2rem;
+    padding: 5rem;
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
