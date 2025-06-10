@@ -28,7 +28,7 @@ body {
     align-items: center;
     padding-right: 2rem;
     border-right: 1px solid #eee;
-    width: 400px;
+    width: 600px;
 }
 
 .device-image {
@@ -47,12 +47,12 @@ body {
 
 .lcd-display {
     position: absolute;
-    top: 70%;
+    top: 78%;
     left: 50%;
     transform: translate(-50%, -50%) scale(1);
-    border: 1px solid #131313;
+    border: 1px solid #000000;
     transform-origin: center center;
-    background-color: #000;
+    background-color: #333333;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
@@ -173,13 +173,13 @@ body {
 
 .led-light {
     position: absolute;
-    width: 80px;
-    height: 5px;
-    border-radius: 2px;
+    width: 120px;
+    height: 12px;
+    border-radius: 5px;
     background-color: #333;
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
-    top: 79%;
-    right: 40%;
+    top: 86.5%;
+    right: 39.3%;
     transition: background-color 0.3s ease;
 }
 
@@ -286,12 +286,13 @@ body {
 
 .power-button {
     position: absolute;
-    width: 10px;
-    height: 80px;
+    width: 30px;
+    height: 130px;
     background-color: #000;
+    border-radius: 8px;
     opacity: 0.3;
-    bottom: 110px;
-    right: 37px;
+    bottom: 130px;
+    right: 55px;
     z-index: 2;
     transition: opacity 0.2s ease;
     cursor: pointer;
@@ -304,7 +305,7 @@ body {
 .power-arrow-indicator {
     position: absolute;
     right: 22px;
-    bottom: 146px;
+    bottom: 190px;
     width: 0;
     height: 0;
     border-top: 6px solid transparent;
