@@ -1593,7 +1593,7 @@ const flows = {
                         const cycle = 2000;
                         const percent = ((frame % cycle) / (cycle - 1)) * 100;
                         if (percent >= 99.5) {
-                            currentStateIndex = 3; // Move to Battery Fully Charged state
+                            currentStateIndex = 1; // Move to Battery Fully Charged state
                             updateDisplay();
                             return;
                         }
