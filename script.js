@@ -2190,7 +2190,7 @@ let connectionState = 'searching';
 
 // Add at the top, after other state variables
 const microQRImg = new Image();
-microQRImg.src = '/Users/sam/Documents/DS_LCDpreview/Assets/qr.svg';
+microQRImg.src = 'Assets/qr.svg';
 let microQRImgLoaded = false;
 microQRImg.onload = function() { microQRImgLoaded = true; updateDisplay(); };
 
