@@ -1,3 +1,24 @@
+@font-face {
+    font-family: 'Barlow';
+    src: url('fonts/Barlow_300Light.ttf') format('truetype');
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Barlow';
+    src: url('fonts/Barlow_400Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Barlow';
+    src: url('fonts/Barlow_500Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -82,6 +103,8 @@ body {
 .panel-content h2 {
     color: #2c3e50;
     margin-bottom: 0.5rem;
+    font-family: 'Barlow', sans-serif;
+    font-weight: 400;
 }
 
 .navigation-controls {
@@ -121,11 +144,15 @@ body {
 .explanation-box h3 {
     color: #2c3e50;
     margin-bottom: 0.75rem;
+    font-family: 'Barlow', sans-serif;
+    font-weight: 400;
 }
 
 .explanation-box p {
     color: #666;
     line-height: 1.5;
+    font-family: 'Barlow', sans-serif;
+    font-weight: 300;
 }
 
 .step-indicator {
@@ -136,6 +163,8 @@ body {
     background-color: white;
     border-radius: 4px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    font-family: 'Barlow', sans-serif;
+    font-weight: 300;
 }
 
 .flow-selector {
@@ -147,6 +176,8 @@ body {
     margin-bottom: 0.5rem;
     color: #2c3e50;
     font-weight: 500;
+    font-family: 'Barlow', sans-serif;
+    font-weight: 400;
 }
 
 .flow-select {
@@ -159,6 +190,8 @@ body {
     color: #2c3e50;
     cursor: pointer;
     transition: border-color 0.2s;
+    font-family: 'Barlow', sans-serif;
+    font-weight: 300;
 }
 
 .flow-select:hover {
@@ -319,4 +352,21 @@ body {
 @keyframes bounce {
     0%, 100% { transform: translateX(0); }
     50% { transform: translateX(5px); }
+}
+
+.cable-container {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.cable-svg {
+    position: absolute;
+    bottom: 15%;
+    left: 3%;
+    transform: translate(-50%, -50%) scale(1.2);
 } 

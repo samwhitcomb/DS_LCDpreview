@@ -11,6 +11,18 @@ const CENTER_POSITION = {
     size: 30
 };
 
+// Add cable state management
+let isCableVisible = false;
+
+// Function to update cable visibility
+function updateCableVisibility(visible) {
+    const cableElement = document.getElementById('cable');
+    if (cableElement) {
+        cableElement.style.display = visible ? 'block' : 'none';
+    }
+    isCableVisible = visible;
+}
+
 // Battery drawing function
 function drawBattery(ctx, level) {
     const x = 130;  // Position from right
@@ -439,8 +451,8 @@ const flows = {
     ],
     binding: [
         {
-            title: "Binding Ready",
-            explanation: "Device is ready to be bound to your account.",
+            title: "Linking Ready",
+            explanation: "Device is ready to be linked to your account.",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -460,8 +472,10 @@ const flows = {
                 const availableHeight = 70 - qrHeight;
                 let fontSize = Math.floor(availableHeight * 0.6);
                 if (fontSize < 16) fontSize = 16;
+                fontSize = Math.floor(fontSize * 1.2); // Increase by 20%
                 ctx.fillStyle = '#fff';
-                ctx.font = `${fontSize}px monospace`;
+                ctx.font = `${fontSize}px Barlow`;
+                ctx.fontWeight = '500';
                 ctx.textAlign = 'center';
                 const textY = Math.floor((availableHeight + fontSize) / 2) - 0;
                 ctx.fillText(serial, 80, textY);
@@ -484,7 +498,7 @@ const flows = {
                 const animate = () => {
                     const currentStates = flows[currentFlow];
                     const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Binding Ready") {
+                    if (currentState.title === "Linking Ready") {
                         currentState.draw(ctx, frame++);
                         requestAnimationFrame(animate);
                     }
@@ -493,18 +507,70 @@ const flows = {
             }
         },
         {
-            title: "Binding in Progress",
-            explanation: "Device is being bound to your account.",
+            title: "Linking in Progress",
+            explanation: "Device is being linked to your account.",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw text at the top
                 ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
+                ctx.font = '19px Barlow';
+                ctx.fontWeight = '400';
                 ctx.textAlign = 'center';
                 
-                // Animated dots
+                // Draw fixed "Linking" text
+                ctx.fillText('Linking', 80, 52);  // Changed from 55 to 52
+                
+                // Draw animated dots separately
                 const dots = '.'.repeat(Math.floor(frame / 20) % 4);
-                ctx.fillText('Binding' + dots, 80, 40);
+                const dotsWidth = ctx.measureText(dots).width;
+                const linkingWidth = ctx.measureText('Linking').width;
+                const spacing = 3; // Space between text and dots
+                ctx.fillText(dots, 80 + (linkingWidth/2) + spacing, 52);  // Changed from 55 to 52
+                
+                // Draw progress bar at the bottom
+                const barWidth = 120;
+                const barHeight = 8;
+                const barX = (160 - barWidth) / 2;
+                const barY = 65;
+                const radius = barHeight / 2;
+                
+                // Calculate progress (0 to 1)
+                const progress = Math.min(1, frame / 300); // 5 seconds total
+                
+                // Draw background bar
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.beginPath();
+                ctx.moveTo(barX + radius, barY);
+                ctx.lineTo(barX + barWidth - radius, barY);
+                ctx.quadraticCurveTo(barX + barWidth, barY, barX + barWidth, barY + radius);
+                ctx.lineTo(barX + barWidth, barY + barHeight - radius);
+                ctx.quadraticCurveTo(barX + barWidth, barY + barHeight, barX + barWidth - radius, barY + barHeight);
+                ctx.lineTo(barX + radius, barY + barHeight);
+                ctx.quadraticCurveTo(barX, barY + barHeight, barX, barY + barHeight - radius);
+                ctx.lineTo(barX, barY + radius);
+                ctx.quadraticCurveTo(barX, barY, barX + radius, barY);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Draw progress fill
+                const fillWidth = barWidth * progress;
+                if (fillWidth > 0) {
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.moveTo(barX + radius, barY);
+                    ctx.lineTo(barX + fillWidth - radius, barY);
+                    ctx.quadraticCurveTo(barX + fillWidth, barY, barX + fillWidth, barY + radius);
+                    ctx.lineTo(barX + fillWidth, barY + barHeight - radius);
+                    ctx.quadraticCurveTo(barX + fillWidth, barY + barHeight, barX + fillWidth - radius, barY + barHeight);
+                    ctx.lineTo(barX + radius, barY + barHeight);
+                    ctx.quadraticCurveTo(barX, barY + barHeight, barX, barY + barHeight - radius);
+                    ctx.lineTo(barX, barY + radius);
+                    ctx.quadraticCurveTo(barX, barY, barX + radius, barY);
+                    ctx.closePath();
+                    ctx.fill();
+                }
                 
                 drawBattery(ctx, 85);
             },
@@ -514,12 +580,12 @@ const flows = {
                 const animate = () => {
                     const currentStates = flows[currentFlow];
                     const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Binding in Progress") {
+                    if (currentState.title === "Linking in Progress") {
                         currentState.draw(ctx, frame++);
                         if (frame < 300) { // 5 seconds
                             requestAnimationFrame(animate);
                         } else {
-                            currentStateIndex = 2; // Move to Binding Complete
+                            currentStateIndex = 2; // Move to Linking Complete
                             updateDisplay();
                         }
                     }
@@ -528,20 +594,33 @@ const flows = {
             }
         },
         {
-            title: "Binding Complete",
-            explanation: "Device has been successfully bound to your account.",
+            title: "Linking Complete",
+            explanation: "Device has been successfully linked to your account.",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText('Binding', 80, 30);
-                ctx.fillText('Complete!', 80, 50);
-                
-                drawBattery(ctx, 85);
+                const shouldContinue = drawSuccessAnimation(ctx, frame);
+                if (!shouldContinue) {
+                    // Move to Post Binding state
+                    currentStateIndex = 3; // Move to Post Binding state
+                    updateDisplay();
+                }
             },
-            led: { state: 'on', color: 'green' }
+            led: { state: 'on', color: 'green' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Linking Complete") {
+                        currentState.draw(ctx, frame++);
+                        if (frame < 270) { // Total duration: 4.5 seconds
+                            requestAnimationFrame(animate);
+                        }
+                    }
+                };
+                animate();
+            }
         }
     ],
     calibration: [
@@ -832,48 +911,38 @@ const flows = {
                 const circleDuration = 30; // Half second for circle
                 const checkDuration = 20;  // Third of a second for checkmark
                 const textDuration = 30;   // Half second for text
-                const restartDuration = 60; // 1 second for restart message
                 
                 const circleProgress = Math.min(1, frame / circleDuration);
                 const checkProgress = Math.max(0, Math.min(1, (frame - circleDuration) / checkDuration));
                 const textProgress = Math.max(0, Math.min(1, (frame - circleDuration - checkDuration) / textDuration));
-                const restartProgress = Math.max(0, Math.min(1, (frame - circleDuration - checkDuration - textDuration) / restartDuration));
                 
                 // Draw animated circle
                 ctx.strokeStyle = '#00ff00';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.arc(80, 30, 15, 0, Math.PI * 2 * circleProgress);
+                ctx.arc(80, 40, 15, 0, Math.PI * 2 * circleProgress);
                 ctx.stroke();
                 
                 // Draw animated checkmark
                 if (checkProgress > 0) {
                     ctx.beginPath();
-                    ctx.moveTo(70, 30);
-                    ctx.lineTo(75, 35);
-                    ctx.lineTo(90, 25);
+                    ctx.moveTo(70, 40);
+                    ctx.lineTo(75, 45);
+                    ctx.lineTo(90, 35);
                     ctx.stroke();
                 }
                 
                 // Draw text with fade in
                 ctx.fillStyle = `rgba(255, 255, 255, ${textProgress})`;
-                ctx.font = '12px monospace';
+                ctx.font = '19px Barlow';
+                ctx.fontWeight = '400';
                 ctx.textAlign = 'center';
-                ctx.fillText('Update Complete', 80, 60);
+                ctx.fillText('Update Complete', 80, 65);
+                ctx.font = '17px Barlow';
+                ctx.fontWeight = '300';
+                ctx.fillText('Device will restart', 80, 85);
                 
-                // Draw restart message with fade in
-                if (restartProgress > 0) {
-                    ctx.fillStyle = `rgba(255, 255, 255, ${restartProgress})`;
-                    ctx.font = '10px monospace';
-                    ctx.fillText('Device will restart', 80, 75);
-                }
-                
-                // Move to power on state after all animations complete
-                if (frame >= circleDuration + checkDuration + textDuration + restartDuration + 30) { // Add 0.5s delay
-                    currentFlow = "power";
-                    currentStateIndex = 1; // Move to Power On state
-                    updateDisplay();
-                }
+                drawBattery(ctx, 85);
             },
             led: { state: 'on', color: 'green' },
             onEnter: () => {
@@ -1441,98 +1510,95 @@ const flows = {
         }
     ],
     testing: [
+       
         {
-            title: "Test Screen 1",
-            explanation: "This is a test screen for experiments.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#222';
-                ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#0f0';
-                ctx.font = '18px monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText('Testing Flow', 80, 40);
-                ctx.font = '12px monospace';
-                ctx.fillStyle = '#fff';
-                ctx.fillText('Add your tests here!', 80, 60);
-            },
-            led: { state: 'off', color: 'none' }
-        },
-        {
-            title: "Animated Battery",
+            title: "Animated Battery 2",
             explanation: "A large battery animating a charging sequence.",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#111';
                 ctx.fillRect(0, 0, 160, 80);
-                // Animate battery level from 0 to 100% in a loop
-                const cycle = 2000; // slower animation
+                
+                // Calculate if battery is fully charged
+                const cycle = 2000;
                 const percent = ((frame % cycle) / (cycle - 1)) * 100;
-                // Battery dimensions - reduced size
-                const x = 32;
-                const y = 5; // Sticky to top
-                const width = 90;
-                const height = 45; // Reduced height
-                const radius = 6; // Slightly reduced radius
-                // Draw battery outline with rounded corners
-                ctx.save();
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.moveTo(x + radius, y);
-                ctx.lineTo(x + width - radius, y);
-                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-                ctx.lineTo(x + width, y + height - radius);
-                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-                ctx.lineTo(x + radius, y + height);
-                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-                ctx.lineTo(x, y + radius);
-                ctx.quadraticCurveTo(x, y, x + radius, y);
-                ctx.closePath();
-                ctx.stroke();
-                ctx.restore();
-                // Battery tip
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(x + width, y + height / 4, 8, height / 2);
-                // Battery fill with rounded corners
-                ctx.save();
-                // Fill area padding
-                const pad = 6;
-                ctx.beginPath();
-                ctx.moveTo(x + radius + pad, y + pad);
-                ctx.lineTo(x + pad + (width - 2 * pad) * (percent / 100), y + pad);
-                ctx.lineTo(x + pad + (width - 2 * pad) * (percent / 100), y + height - pad);
-                ctx.lineTo(x + radius + pad, y + height - pad);
-                ctx.quadraticCurveTo(x + pad, y + height - pad, x + pad, y + height - pad - radius);
-                ctx.lineTo(x + pad, y + pad + radius);
-                ctx.quadraticCurveTo(x + pad, y + pad, x + radius + pad, y + pad);
-                ctx.closePath();
-                ctx.clip();
-                // Fill color - now always white
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(x + pad, y + pad, (width - 2 * pad) * (percent / 100), height - 2 * pad);
-                // Shimmer effect
-                const shimmerWidth = 25;
-                const shimmerX = x + pad + ((frame * 2) % ((width - 2 * pad) + shimmerWidth)) - shimmerWidth;
-                const grad = ctx.createLinearGradient(shimmerX, 0, shimmerX + shimmerWidth, 0);
-                grad.addColorStop(0, 'rgba(255,255,255,0)');
-                grad.addColorStop(0.5, 'rgba(255,255,255,0.5)');
-                grad.addColorStop(1, 'rgba(255,255,255,0)');
-                ctx.fillStyle = grad;
-                ctx.fillRect(x + pad, y + pad, (width - 2 * pad) * (percent / 100), height - 2 * pad);
-                ctx.restore();
-                // Percentage text - now at bottom
-                ctx.fillStyle = '#fff';
-                ctx.font = '16px monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText(Math.round(percent) + '%', 80, 75); // Positioned at bottom
+                const isFullyCharged = percent >= 99.5; // Consider fully charged at 99.5% or higher
+                
+                // Only draw charging indicator and lightning bolt if not fully charged
+                if (!isFullyCharged) {
+                    // Draw charging indicator on the left
+                    const indicatorWidth = 4;
+                    const indicatorHeight = 45;
+                    const indicatorX = 0;
+                    const indicatorY = 17;
+                    
+                    // Draw vertical rectangle
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(indicatorX, indicatorY, indicatorWidth, indicatorHeight);
+                    
+                    // Lightning bolt configuration
+                    const boltConfig = {
+                        x: indicatorX + 10,
+                        y: indicatorY + 10,
+                        width: 14,
+                        height: 22,
+                        thickness: 1,
+                        angle: 0,
+                        color: '#fff'
+                    };
+                    
+                    // Draw lightning bolt
+                    ctx.save();
+                    ctx.fillStyle = boltConfig.color;
+                    ctx.translate(boltConfig.x, boltConfig.y);
+                    ctx.rotate(boltConfig.angle * Math.PI / 180);
+                    
+                    const w = boltConfig.width;
+                    const h = boltConfig.height;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(w * 0.794, 0);
+                    ctx.lineTo(w * 0.308, 0);
+                    ctx.lineTo(0, h * 0.526);
+                    ctx.lineTo(w * 0.481, h * 0.526);
+                    ctx.lineTo(w * 0.264, h);
+                    ctx.lineTo(w, h * 0.383);
+                    ctx.lineTo(w * 0.481, h * 0.383);
+                    ctx.lineTo(w * 0.794, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                }
+                
+                // Draw battery with custom options
+                drawAnimatedBattery(ctx, frame, {
+                    x: isFullyCharged ? 32 : 49,  // Adjust position when fully charged
+                    y: 23,  // Vertically centered
+                    width: isFullyCharged ? 90 : 62,  // Full width when charged
+                    height: 34,
+                    radius: 7,
+                    showPercentage: true,
+                    percentageY: 45,  // Inside battery
+                    shimmer: false
+                });
             },
-            led: { state: 'breathing', color: 'white' },
+            led: { state: 'off', color: 'none' },
             onEnter: () => {
                 let frame = 0;
                 const animate = () => {
                     const currentStates = flows[currentFlow];
                     const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Animated Battery") {
+                    if (currentState.title === "Animated Battery 2") {
                         currentState.draw(ctx, frame++);
+                        
+                        // Check if battery is fully charged and advance to next state
+                        const cycle = 2000;
+                        const percent = ((frame % cycle) / (cycle - 1)) * 100;
+                        if (percent >= 99.5) {
+                            currentStateIndex = 3; // Move to Battery Fully Charged state
+                            updateDisplay();
+                            return;
+                        }
+                        
                         requestAnimationFrame(animate);
                     }
                 };
@@ -1540,14 +1606,11 @@ const flows = {
             }
         },
         {
-            title: "Animated Battery 2",
-            explanation: "A large battery animating a charging sequence.",
+            title: "Battery Fully Charged",
+            explanation: "Battery fully charged at 100% whilst still plugged in.",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#111';
                 ctx.fillRect(0, 0, 160, 80);
-                // Animate battery level from 0 to 100% in a loop
-                const cycle = 2000; // slower animation
-                const percent = ((frame % cycle) / (cycle - 1)) * 100;
                 
                 // Draw charging indicator on the left
                 const indicatorWidth = 4;
@@ -1559,93 +1622,124 @@ const flows = {
                 ctx.fillStyle = '#fff';
                 ctx.fillRect(indicatorX, indicatorY, indicatorWidth, indicatorHeight);
                 
+                // Calculate lightning bolt opacity (fade out over 1 second = 60 frames)
+                const fadeDuration = 60;
+                const boltOpacity = Math.max(0, 1 - (frame / fadeDuration));
+                
                 // Lightning bolt configuration
                 const boltConfig = {
-                    x: indicatorX + 10,        // X position (distance from left edge)
-                    y: indicatorY + 10,       // Y position (distance from top)
-                    width: 14,                // Width of the bolt (matching SVG)
-                    height: 22,               // Height of the bolt (matching SVG)
-                    thickness: 1,             // Thickness of the bolt lines
-                    angle: 0,                 // Rotation angle in degrees
-                    color: '#fff'             // Color of the bolt
+                    x: indicatorX + 10,
+                    y: indicatorY + 10,
+                    width: 14,
+                    height: 22,
+                    thickness: 1,
+                    angle: 0,
+                    color: `rgba(255, 255, 255, ${boltOpacity})`
                 };
                 
-                // Draw lightning bolt
+                // Draw lightning bolt with fade
                 ctx.save();
                 ctx.fillStyle = boltConfig.color;
                 ctx.translate(boltConfig.x, boltConfig.y);
                 ctx.rotate(boltConfig.angle * Math.PI / 180);
                 
-                // Calculate bolt points based on config
                 const w = boltConfig.width;
                 const h = boltConfig.height;
                 
                 ctx.beginPath();
-                // Top right point
                 ctx.moveTo(w * 0.794, 0);
-                // Top left point
                 ctx.lineTo(w * 0.308, 0);
-                // Left middle point
                 ctx.lineTo(0, h * 0.526);
-                // Left bottom point
                 ctx.lineTo(w * 0.481, h * 0.526);
-                // Bottom left point
                 ctx.lineTo(w * 0.264, h);
-                // Bottom right point
                 ctx.lineTo(w, h * 0.383);
-                // Right middle point
                 ctx.lineTo(w * 0.481, h * 0.383);
-                // Close back to top right
                 ctx.lineTo(w * 0.794, 0);
                 ctx.closePath();
                 ctx.fill();
                 ctx.restore();
                 
-                // Battery dimensions - 20% smaller and centered
-                const width = 72; // 90 * 0.8
-                const height = 36; // 45 * 0.8
-                const x = (160 - width) / 2; // Center horizontally
-                const y = (80 - height) / 2; // Center vertically
-                const radius = 5; // Slightly reduced radius
-                
-                // Draw battery outline with rounded corners
-                ctx.save();
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.moveTo(x + radius, y);
-                ctx.lineTo(x + width - radius, y);
-                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-                ctx.lineTo(x + width, y + height - radius);
-                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-                ctx.lineTo(x + radius, y + height);
-                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-                ctx.lineTo(x, y + radius);
-                ctx.quadraticCurveTo(x, y, x + radius, y);
-                ctx.closePath();
-                ctx.stroke();
-                ctx.restore();
-                
-                // Battery tip
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(x + width, y + height / 4, 6, height / 2);
-                
-                // Percentage text inside battery
-                ctx.fillStyle = '#fff';
-                ctx.font = '18px monospace';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(Math.round(percent) + '%', x + width/2, y + height/2);
+                // Draw battery at 100%
+                drawAnimatedBattery(ctx, 0, {
+                    x: 49,  // Keep same position as charging state
+                    y: 23,
+                    width: 62,  // Keep same width as charging state
+                    height: 34,
+                    radius: 7,
+                    showPercentage: true,
+                    percentageY: 45,
+                    shimmer: false,
+                    forcePercent: 100  // Force 100% display
+                });
             },
-            led: { state: 'breathing', color: 'white' },
+            led: { state: 'off', color: 'none' },
             onEnter: () => {
                 let frame = 0;
                 const animate = () => {
                     const currentStates = flows[currentFlow];
                     const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Animated Battery 2") {
+                    if (currentState.title === "Battery Fully Charged") {
                         currentState.draw(ctx, frame++);
                         requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Cable Disconnect",
+            explanation: "Cable is unplugged and battery indicator persists before turning off.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#111';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Calculate animation phases
+                const batteryPersistDuration = 300; // 5 seconds for battery persistence
+                const batteryFadeDuration = 30; // 0.5 seconds for battery fade out
+                
+                // Calculate battery opacity (fade out at the end)
+                const batteryOpacity = frame < batteryPersistDuration ? 1 :
+                    frame < batteryPersistDuration + batteryFadeDuration ?
+                    1 - ((frame - batteryPersistDuration) / batteryFadeDuration) : 0;
+                
+                // Draw battery at 100% with fade out
+                if (batteryOpacity > 0) {
+                    ctx.globalAlpha = batteryOpacity;
+                    drawAnimatedBattery(ctx, 0, {
+                        x: 49,
+                        y: 23,
+                        width: 62,
+                        height: 34,
+                        radius: 7,
+                        showPercentage: true,
+                        percentageY: 45,
+                        shimmer: false,
+                        forcePercent: 100
+                    });
+                    ctx.globalAlpha = 1;
+                }
+            },
+            led: { state: 'off', color: 'none' },
+            onEnter: () => {
+                let frame = 0;
+                
+                // Get the cable element
+                const cableElement = document.getElementById('cable');
+                if (cableElement) {
+                    // Add animation class
+                    cableElement.style.transition = 'transform 0.5s ease-out, opacity 0.5s ease-out';
+                    cableElement.style.transform = 'translateX(-100px)';
+                    cableElement.style.opacity = '0';
+                }
+                
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Cable Disconnect") {
+                        currentState.draw(ctx, frame++);
+                        if (frame < 330) { // Continue for 5.5 seconds (5s persist + 0.5s fade)
+                            requestAnimationFrame(animate);
+                        }
                     }
                 };
                 animate();
@@ -1687,6 +1781,9 @@ microQRImg.onload = function() { microQRImgLoaded = true; updateDisplay(); };
 function updateDisplay() {
     const currentStates = flows[currentFlow];
     const currentState = currentStates[currentStateIndex];
+    
+    // Update cable visibility based on flow
+    updateCableVisibility(currentFlow === 'testing');
     
     // Clear canvas
     ctx.fillStyle = '#000';
@@ -1935,3 +2032,105 @@ populateFlowSelect();
 
 // Initialize the display
 updateDisplay(); 
+
+// Add this function near the top with other drawing functions
+function drawSuccessAnimation(ctx, frame) {
+    // Animation phases
+    const fullHeightDuration = 60;  // 1 second full height
+    const minimizeDuration = 30;    // 0.5 seconds minimize
+    const textDuration = 180;       // 3 seconds with text
+    const totalDuration = fullHeightDuration + minimizeDuration + textDuration;
+    
+    // Calculate progress for each phase
+    const fullHeightProgress = Math.min(1, frame / fullHeightDuration);
+    const minimizeProgress = Math.max(0, Math.min(1, (frame - fullHeightDuration) / minimizeDuration));
+    const textProgress = Math.max(0, Math.min(1, (frame - fullHeightDuration - minimizeDuration) / 30));
+    
+    // Calculate sizes and positions
+    const fullSize = 30;  // Reduced full height size to fit screen
+    const smallSize = 10; // Smaller minimized size
+    const currentSize = frame < fullHeightDuration ? fullSize : 
+                       fullSize - (fullSize - smallSize) * minimizeProgress;
+    
+    // Calculate positions
+    const centerX = 80;
+    const centerY = frame < fullHeightDuration ? 35 : 25; // Adjusted vertical position
+    
+    // Draw animated circle
+    ctx.strokeStyle = '#00ff00';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, currentSize, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Draw checkmark (scaled with circle)
+    const checkScale = currentSize / fullSize;
+    const checkOffset = 12 * checkScale; // Slightly smaller checkmark
+    ctx.beginPath();
+    ctx.moveTo(centerX - checkOffset, centerY);
+    ctx.lineTo(centerX - checkOffset/2, centerY + checkOffset/2);
+    ctx.lineTo(centerX + checkOffset, centerY - checkOffset/2);
+    ctx.stroke();
+    
+    // Draw text when minimized
+    if (frame >= fullHeightDuration + minimizeDuration) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${textProgress})`;
+        ctx.font = '20px Barlow';  // Increased font size
+        ctx.fontWeight = '400';
+        ctx.textAlign = 'center';
+        ctx.fillText('Linking Complete', 80, 70); // Positioned at bottom
+    }
+    
+    return frame < totalDuration; // Return true if animation should continue
+}
+
+// Add the new reusable battery animation function
+function drawAnimatedBattery(ctx, frame, options = {}) {
+    const {
+        x = 32,
+        y = 5,
+        width = 90,
+        height = 45,
+        radius = 6,
+        cycle = 2000,
+        showPercentage = true,
+        percentageY = null,  // Will be calculated based on battery position
+        forcePercent = null  // New option to force a specific percentage
+    } = options;
+
+    // Use forced percentage if provided, otherwise calculate from frame
+    const percent = forcePercent !== null ? forcePercent : ((frame % cycle) / (cycle - 1)) * 100;
+    
+    // Draw battery outline with rounded corners
+    ctx.save();
+    ctx.strokeStyle = percent > 90 ? '#00ff00' : '#fff';  // Green when above 90%
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+    
+    // Battery tip
+    ctx.fillStyle = percent > 90 ? '#00ff00' : '#fff';  // Green when above 90%
+    ctx.fillRect(x + width, y + height / 4, 8, height / 2);
+    
+    // Percentage text if enabled
+    if (showPercentage) {
+        ctx.fillStyle = '#fff';
+        ctx.font = '19px Barlow';  // Increased from 16px to 19px (20% larger)
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        // Center text vertically in the battery
+        const textY = y + (height / 2);
+        ctx.fillText(Math.round(percent) + '%', x + width/2, textY);
+    }
+} 
