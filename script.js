@@ -2493,7 +2493,8 @@ function drawAnimatedBattery(ctx, frame, options = {}) {
         cycle = 2000,
         showPercentage = true,
         percentageY = null,  // Will be calculated based on battery position
-        forcePercent = null  // New option to force a specific percentage
+        forcePercent = null,  // New option to force a specific percentage
+        shimmer = false      // Option to enable shimmer was unused before
     } = options;
 
     // Use forced percentage if provided, otherwise calculate from frame
@@ -2523,10 +2524,18 @@ function drawAnimatedBattery(ctx, frame, options = {}) {
     
     // Percentage text if enabled
     if (showPercentage) {
-        ctx.fillStyle = '#fff';
+        // Add pulsing effect based on the current percentage value
+        // Higher percent values will pulse more subtly
+        const pulseIntensity = 0.3 - (percent / 100) * 0.2; // Decreases from 0.3 to 0.1 as percentage increases
+        const pulseSpeed = 0.15 - (percent / 100) * 0.05;   // Decreases from 0.15 to 0.1 as percentage increases
+        const pulseOffset = Math.sin(frame * pulseSpeed) * pulseIntensity;
+        const textOpacity = 0.7 + pulseOffset;
+        
+        ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
         ctx.font = '19px Barlow';  // Increased from 16px to 19px (20% larger)
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        
         // Center text vertically in the battery
         const textY = y + (height / 2);
         ctx.fillText(Math.round(percent) + '%', x + width/2, textY);
