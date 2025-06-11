@@ -623,114 +623,6 @@ const flows = {
             }
         }
     ],
-    calibration: [
-        {
-            title: "Calibration Start",
-            explanation: "Device is ready to begin calibration.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText('Calibration', 80, 30);
-                ctx.fillText('Starting...', 80, 50);
-                
-                drawBattery(ctx, 85);
-            },
-            led: { state: 'breathing', color: 'yellow' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Calibration Start") {
-                        currentState.draw(ctx, frame++);
-                        if (frame < 60) { // 1 second
-                            requestAnimationFrame(animate);
-                        } else {
-                            currentStateIndex = 1; // Move to Calibrating
-                            updateDisplay();
-                        }
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Calibrating",
-            explanation: "Device is calibrating sensors and alignment.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Draw calibration animation
-                const centerX = 80;
-                const centerY = 40;
-                const radius = 20;
-                const angle = (frame * 0.1) % (Math.PI * 2);
-                
-                // Draw rotating line
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.lineTo(
-                    centerX + Math.cos(angle) * radius,
-                    centerY + Math.sin(angle) * radius
-                );
-                ctx.stroke();
-                
-                // Draw progress circle
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                ctx.stroke();
-                
-                // Draw progress text
-                const progress = Math.min(100, Math.floor((frame / 180) * 100));
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText(`${progress}%`, 80, 70);
-                
-                drawBattery(ctx, 85);
-            },
-            led: { state: 'breathing', color: 'yellow' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Calibrating") {
-                        currentState.draw(ctx, frame++);
-                        if (frame < 180) { // 3 seconds
-                            requestAnimationFrame(animate);
-                        } else {
-                            currentStateIndex = 2; // Move to Calibration Complete
-                            updateDisplay();
-                        }
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Calibration Complete",
-            explanation: "Device calibration has been completed successfully.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText('Calibration', 80, 30);
-                ctx.fillText('Complete!', 80, 50);
-                
-                drawBattery(ctx, 85);
-            },
-            led: { state: 'on', color: 'green' }
-        }
-    ],
     firmwareUpdate: [
         {
             title: "Update Ready",
@@ -1511,6 +1403,107 @@ const flows = {
     ],
     'cable charging': [
         {
+            title: "Connect cable",
+            explanation: "Cable is being plugged into the device.",
+            draw: (ctx, frame) => {
+                // Start with blank screen
+                ctx.fillStyle = '#111';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Calculate animation phases
+                const cableAnimationDuration = 30; // 0.5 seconds for cable animation
+                const indicatorDelay = 2; // Short delay before showing indicators
+                const holdDuration = 60; // 1 second hold after indicators appear
+                
+                // Get the cable element
+                const cableElement = document.getElementById('cable');
+                if (cableElement) {
+                    if (frame === 0) {
+                        // Initial state - cable off screen
+                        cableElement.style.display = 'block';
+                        cableElement.style.transition = 'transform 0.5s ease-out';
+                        cableElement.style.transform = 'translateX(-100px)';
+                        // Trigger reflow
+                        cableElement.offsetHeight;
+                        // Animate cable in
+                        cableElement.style.transform = 'translateX(0)';
+                    }
+                }
+                
+                // Only show charging indicators after cable animation
+                if (frame >= cableAnimationDuration + indicatorDelay) {
+                    // Draw charging indicator on the left
+                    const indicatorWidth = 4;
+                    const indicatorHeight = 45;
+                    const indicatorX = 0;
+                    const indicatorY = 17;
+                    
+                    // Draw vertical rectangle
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(indicatorX, indicatorY, indicatorWidth, indicatorHeight);
+                    
+                    // Lightning bolt configuration
+                    const boltConfig = {
+                        x: indicatorX + 10,
+                        y: indicatorY + 10,
+                        width: 14,
+                        height: 22,
+                        thickness: 1,
+                        angle: 0,
+                        color: '#fff'
+                    };
+                    
+                    // Draw lightning bolt
+                    ctx.save();
+                    ctx.fillStyle = boltConfig.color;
+                    ctx.translate(boltConfig.x, boltConfig.y);
+                    ctx.rotate(boltConfig.angle * Math.PI / 180);
+                    
+                    const w = boltConfig.width;
+                    const h = boltConfig.height;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(w * 0.794, 0);
+                    ctx.lineTo(w * 0.308, 0);
+                    ctx.lineTo(0, h * 0.526);
+                    ctx.lineTo(w * 0.481, h * 0.526);
+                    ctx.lineTo(w * 0.264, h);
+                    ctx.lineTo(w, h * 0.383);
+                    ctx.lineTo(w * 0.481, h * 0.383);
+                    ctx.lineTo(w * 0.794, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                  
+                   
+                }
+            },
+            led: { state: 'off', color: 'none' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Connect cable") {
+                        currentState.draw(ctx, frame++);
+                        
+                        // Move to next state after cable animation, indicators, and hold duration
+                        const cableAnimationDuration = 30; // 0.5 seconds
+                        const indicatorDelay = 2; // Short delay
+                        const holdDuration = 60; // 1 second hold
+                        if (frame >= cableAnimationDuration + indicatorDelay + holdDuration) {
+                            currentStateIndex = 1; // Move to Animated Battery 2 state
+                            updateDisplay();
+                            return;
+                        }
+                        
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
             title: "Animated Battery 2",
             explanation: "A large battery animating a charging sequence.",
             draw: (ctx, frame) => {
@@ -1593,7 +1586,7 @@ const flows = {
                         const cycle = 2000;
                         const percent = ((frame % cycle) / (cycle - 1)) * 100;
                         if (percent >= 99.5) {
-                            currentStateIndex = 1; // Move to Battery Fully Charged state
+                            currentStateIndex = 3; // Move to Battery Fully Charged state (index 2)
                             updateDisplay();
                             return;
                         }
@@ -1693,7 +1686,7 @@ const flows = {
                 ctx.fillRect(0, 0, 160, 80);
                 
                 // Calculate animation phases
-                const batteryPersistDuration = 300; // 5 seconds for battery persistence
+                const batteryPersistDuration = 100; // 5 seconds for battery persistence
                 const batteryFadeDuration = 30; // 0.5 seconds for battery fade out
                 
                 // Calculate battery opacity (fade out at the end)
@@ -1744,6 +1737,222 @@ const flows = {
                 animate();
             }
         }
+    ],
+    levelling: [
+        {
+            title: "Attitude Indicator v4",
+            explanation: "Device orientation: graphically show the accelerometer data in an intuitive way to enhance and facilitate levelling outside of the app",
+            draw: (ctx, frame) => {
+                // Clear the canvas
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Save the context state
+                ctx.save();
+                
+                // Move to center and rotate for roll
+                const centerX = 80;
+                const centerY = 40;
+                ctx.translate(centerX, centerY);
+                ctx.rotate((rollDegrees * rollExaggerationFactor) * Math.PI / 180);  // Use global roll exaggeration
+                
+                // Draw extended sky (black) - make it larger than the LCD
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(-200, -200, 400, 400);
+                
+                // Determine if we're within 1 degree margin
+                const isLevel = Math.abs(rollDegrees) <= 1 && Math.abs(pitchDegrees) <= 1;
+                
+                // Draw extended ground with color based on level status
+                ctx.fillStyle = isLevel ? '#00FF00' : '#FF0000';
+                ctx.fillRect(-200, pitchDegrees * pitchExaggerationFactor, 400, 400);  // Move the ground with pitch
+                
+                // Restore the context
+                ctx.restore();
+                
+                // Draw the fixed horizon line in white
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(0, 40);  // Fixed at center
+                ctx.lineTo(160, 40);
+                ctx.stroke();
+                
+                // Draw the fixed center marker in white
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(70, 40);  // Fixed at center
+                ctx.lineTo(90, 40);
+                ctx.moveTo(80, 30);
+                ctx.lineTo(80, 50);
+                ctx.stroke();
+            },
+            led: { state: 'on', color: 'green' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Attitude Indicator v4") {  // Fixed to check for v4
+                        // Update LED state based on level status
+                        const isLevel = Math.abs(rollDegrees) <= 1 && Math.abs(pitchDegrees) <= 1;
+                        currentState.led = isLevel ? 
+                            { state: 'on', color: 'green' } : 
+                            { state: 'blink', color: 'green' };
+                            
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Attitude Indicator v2",
+            explanation: "Device orientation: graphically show the accelerometer data in an intuitive way to enhance and facilitate levelling outside of the app",
+            draw: (ctx, frame) => {
+                // Clear the canvas
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Save the context state
+                ctx.save();
+                
+                // Move to center and rotate for roll
+                const centerX = 80;
+                const centerY = 40;
+                ctx.translate(centerX, centerY);
+                ctx.rotate((rollDegrees * rollExaggerationFactor) * Math.PI / 180);  // Use global roll exaggeration
+                
+                // Draw extended sky (blue) - make it larger than the LCD
+                ctx.fillStyle = '#1E90FF';
+                ctx.fillRect(-200, -200, 400, 400);
+                
+                // Draw extended ground (brown) - make it larger than the LCD
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(-200, 0, 400, 400);
+                
+                // Determine if we're within 1 degree margin (using original values for level check)
+                const isLevel = Math.abs(rollDegrees) <= 1 && Math.abs(pitchDegrees) <= 1;
+                
+                // Draw the horizon line with color based on level status
+                ctx.strokeStyle = isLevel ? '#00FF00' : '#FF0000';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(-200, pitchDegrees * pitchExaggerationFactor);  // Use global pitch exaggeration
+                ctx.lineTo(200, pitchDegrees * pitchExaggerationFactor);
+                ctx.stroke();
+                
+                // Draw the center marker in white
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-10, pitchDegrees * pitchExaggerationFactor);  // Use global pitch exaggeration
+                ctx.lineTo(10, pitchDegrees * pitchExaggerationFactor);
+                ctx.moveTo(0, (pitchDegrees * pitchExaggerationFactor) - 10);
+                ctx.lineTo(0, (pitchDegrees * pitchExaggerationFactor) + 10);
+                ctx.stroke();
+                
+                // Restore the context
+                ctx.restore();
+                
+                // Draw the degree values
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${Math.round(rollDegrees)}°`, 80, 15);  // Roll at top
+                ctx.textAlign = 'left';
+                ctx.fillText(`${Math.round(pitchDegrees)}°`, 130, 40);  // Pitch on right
+            },
+            led: { state: 'on', color: 'green' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Attitude Indicator v2") {
+                        // Update LED state based on level status
+                        const isLevel = Math.abs(rollDegrees) <= 1 && Math.abs(pitchDegrees) <= 1;
+                        currentState.led = isLevel ? 
+                            { state: 'on', color: 'green' } : 
+                            { state: 'blink', color: 'green' };
+                            
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Attitude Indicator v3",
+            explanation: "Device orientation: graphically show the accelerometer data in an intuitive way to enhance and facilitate levelling outside of the app",
+            draw: (ctx, frame) => {
+                // Clear the canvas
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Save the context state
+                ctx.save();
+                
+                // Move to center and rotate for roll
+                const centerX = 80;
+                const centerY = 40;
+                ctx.translate(centerX, centerY);
+                ctx.rotate((rollDegrees * rollExaggerationFactor) * Math.PI / 180);  // Use global roll exaggeration
+                
+                // Draw extended sky (black) - make it larger than the LCD
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(-200, -200, 400, 400);
+                
+                // Draw extended ground (white) - make it larger than the LCD
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(-200, pitchDegrees * pitchExaggerationFactor, 400, 400);  // Move the ground with pitch
+                
+                // Restore the context
+                ctx.restore();
+                
+                // Draw the fixed horizon line with color based on level status
+                const isLevel = Math.abs(rollDegrees) <= 1 && Math.abs(pitchDegrees) <= 1;
+                ctx.strokeStyle = isLevel ? '#00FF00' : '#FF0000';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(0, 40);  // Fixed at center
+                ctx.lineTo(160, 40);
+                ctx.stroke();
+                
+                // Draw the fixed center marker in white
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(70, 40);  // Fixed at center
+                ctx.lineTo(90, 40);
+                ctx.moveTo(80, 30);
+                ctx.lineTo(80, 50);
+                ctx.stroke();
+            },
+            led: { state: 'on', color: 'green' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Attitude Indicator v3") {
+                        // Update LED state based on level status
+                        const isLevel = Math.abs(rollDegrees) <= 1 && Math.abs(pitchDegrees) <= 1;
+                        currentState.led = isLevel ? 
+                            { state: 'on', color: 'green' } : 
+                            { state: 'blink', color: 'green' };
+                            
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+       
     ]
 };
 
@@ -1772,9 +1981,178 @@ let connectionState = 'searching';
 
 // Add at the top, after other state variables
 const microQRImg = new Image();
-microQRImg.src = 'Micro QR.png';
+microQRImg.src = '/Users/sam/Documents/DS_LCDpreview/Assets/qr.svg';
 let microQRImgLoaded = false;
 microQRImg.onload = function() { microQRImgLoaded = true; updateDisplay(); };
+
+// Add these variables at the top with other state variables
+let rollDegrees = 0;
+let pitchDegrees = 0;
+let isJoystickActive = false;
+let rollExaggerationFactor = 3;  // Global control for roll exaggeration
+let pitchExaggerationFactor = 6;  // Global control for pitch exaggeration
+
+// Add the attitude indicator drawing function
+function drawAttitudeIndicator(ctx, roll, pitch) {
+    // Constants for the attitude indicator
+    const centerX = 80;
+    const centerY = 40;
+    const width = 120;
+    const height = 60;
+    
+    // Save the context state
+    ctx.save();
+    
+    // Move to center and rotate for roll
+    ctx.translate(centerX, centerY);
+    ctx.rotate(roll * Math.PI / 180);
+    
+    // Draw the sky (blue)
+    ctx.fillStyle = '#1E90FF';
+    ctx.fillRect(-width/2, -height/2, width, height/2);
+    
+    // Draw the ground (brown)
+    ctx.fillStyle = '#8B4513';
+    ctx.fillRect(-width/2, 0, width, height/2);
+    
+    // Draw the horizon line
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-width/2, pitch);
+    ctx.lineTo(width/2, pitch);
+    ctx.stroke();
+    
+    // Draw the center marker
+    ctx.beginPath();
+    ctx.moveTo(-10, pitch);
+    ctx.lineTo(10, pitch);
+    ctx.moveTo(0, pitch - 10);
+    ctx.lineTo(0, pitch + 10);
+    ctx.stroke();
+    
+    // Restore the context
+    ctx.restore();
+}
+
+// Add joystick control functions
+function initJoystick() {
+    const joystickContainer = document.createElement('div');
+    joystickContainer.className = 'joystick-container';
+    joystickContainer.innerHTML = `
+        <div class="joystick-base">
+            <div class="joystick-stick"></div>
+        </div>
+        <div class="joystick-labels">
+            <span class="roll-label">Roll: 0°</span>
+            <span class="pitch-label">Pitch: 0°</span>
+        </div>
+    `;
+    
+    document.querySelector('.panel-content').appendChild(joystickContainer);
+    
+    const stick = joystickContainer.querySelector('.joystick-stick');
+    const base = joystickContainer.querySelector('.joystick-base');
+    const rollLabel = joystickContainer.querySelector('.roll-label');
+    const pitchLabel = joystickContainer.querySelector('.pitch-label');
+    
+    let isDragging = false;
+    let startX, startY;
+    let baseRect;
+    
+    function updateJoystick(e) {
+        if (!isDragging) return;
+        
+        const x = e.clientX || e.touches[0].clientX;
+        const y = e.clientY || e.touches[0].clientY;
+        
+        // Calculate position relative to base center
+        const centerX = baseRect.left + baseRect.width / 2;
+        const centerY = baseRect.top + baseRect.height / 2;
+        
+        // Calculate distance from center (limited to base radius)
+        const maxDistance = baseRect.width / 2;
+        const deltaX = x - centerX;
+        const deltaY = y - centerY;
+        const distance = Math.min(Math.sqrt(deltaX * deltaX + deltaY * deltaY), maxDistance);
+        
+        // Calculate angle and position
+        const angle = Math.atan2(deltaY, deltaX);
+        const stickX = Math.cos(angle) * distance;
+        const stickY = Math.sin(angle) * distance;
+        
+        // Update stick position
+        stick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+        
+        // Update degrees with reduced sensitivity
+        rollDegrees = (stickX / maxDistance) * 10; // Max 10 degrees roll
+        pitchDegrees = (stickY / maxDistance) * 10; // Max 10 degrees pitch
+        
+        // Update labels
+        rollLabel.textContent = `Roll: ${Math.round(rollDegrees)}°`;
+        pitchLabel.textContent = `Pitch: ${Math.round(pitchDegrees)}°`;
+        
+        // Update explanation text
+        const explanationText = document.getElementById('stepExplanation');
+        if (explanationText) {
+            explanationText.textContent = `Device orientation: Roll: ${Math.round(rollDegrees)}° Pitch: ${Math.round(pitchDegrees)}°`;
+        }
+        
+        // Force redraw
+        updateDisplay();
+    }
+    
+    function startDrag(e) {
+        isDragging = true;
+        baseRect = base.getBoundingClientRect();
+        updateJoystick(e);
+    }
+    
+    function stopDrag() {
+        isDragging = false;
+        stick.style.transform = 'translate(0, 0)';
+        rollDegrees = 0;
+        pitchDegrees = 0;
+        rollLabel.textContent = 'Roll: 0°';
+        pitchLabel.textContent = 'Pitch: 0°';
+        updateDisplay();
+    }
+    
+    // Add event listeners
+    stick.addEventListener('mousedown', startDrag);
+    stick.addEventListener('touchstart', startDrag);
+    document.addEventListener('mousemove', updateJoystick);
+    document.addEventListener('touchmove', updateJoystick);
+    document.addEventListener('mouseup', stopDrag);
+    document.addEventListener('touchend', stopDrag);
+}
+
+// Modify the populateFlowSelect function to include the new flow
+function populateFlowSelect() {
+    const flowSelect = document.getElementById('flowSelect');
+    flowSelect.innerHTML = '';
+    
+    Object.keys(flows).forEach(flow => {
+        const option = document.createElement('option');
+        option.value = flow;
+        option.textContent = toTitleCase(flow);
+        flowSelect.appendChild(option);
+    });
+    
+    // Initialize or remove joystick when levelling flow is selected
+    flowSelect.addEventListener('change', (e) => {
+        // Remove existing joystick if it exists
+        const existingJoystick = document.querySelector('.joystick-container');
+        if (existingJoystick) {
+            existingJoystick.remove();
+        }
+        
+        // Initialize joystick only for levelling flow
+        if (e.target.value === 'levelling') {
+            initJoystick();
+        }
+    });
+}
 
 // Function to update the display
 function updateDisplay() {
@@ -1860,8 +2238,40 @@ nextButton.addEventListener('click', () => {
 
 // Event listener for flow selection
 flowSelect.addEventListener('change', (e) => {
+    // Reset all state variables
     currentFlow = e.target.value;
     currentStateIndex = 0;
+    connectionState = 'searching';
+    isChargerConnected = false;
+    updateProgress = 0;
+    showSerialNumber = false;
+    isPowerButtonPressed = false;
+    powerButtonPressStartTime = 0;
+    
+    // Reset cable element if it exists
+    const cableElement = document.getElementById('cable');
+    if (cableElement) {
+        cableElement.style.display = 'none';
+        cableElement.style.transform = '';
+        cableElement.style.transition = '';
+        cableElement.style.opacity = '';
+    }
+    
+    // Clean up any existing animations
+    if (currentAnimation) {
+        if (typeof currentAnimation === 'object' && currentAnimation.animation) {
+            currentAnimation.animation.stop();
+            currentAnimation.animation.destroy();
+            if (currentAnimation.container && currentAnimation.container.parentNode) {
+                currentAnimation.container.parentNode.removeChild(currentAnimation.container);
+            }
+        } else if (currentAnimation.destroy) {
+            currentAnimation.destroy();
+        }
+        currentAnimation = null;
+    }
+    
+    // Update the display with fresh state
     updateDisplay();
 });
 
@@ -2014,17 +2424,6 @@ function toTitleCase(str) {
         .replace(/\b\w/g, function(txt){ return txt.toUpperCase(); })
         .replace(/([a-z])([A-Z])/g, '$1 $2')
         .replace(/_/g, ' ');
-}
-
-function populateFlowSelect() {
-    flowSelect.innerHTML = '';
-    Object.keys(flows).forEach(key => {
-        const option = document.createElement('option');
-        option.value = key;
-        // Human-friendly label
-        option.textContent = toTitleCase(key);
-        flowSelect.appendChild(option);
-    });
 }
 
 populateFlowSelect();

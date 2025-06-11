@@ -369,4 +369,58 @@ body {
     bottom: 15%;
     left: 3%;
     transform: translate(-50%, -50%) scale(1.2);
+}
+
+/* Joystick styles */
+.joystick-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding: 1rem;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+}
+
+.joystick-base {
+    width: 150px;
+    height: 150px;
+    background-color: #333;
+    border-radius: 50%;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.joystick-stick {
+    width: 60px;
+    height: 60px;
+    background-color: #666;
+    border-radius: 50%;
+    position: absolute;
+    cursor: grab;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s ease-out;
+}
+
+.joystick-stick:active {
+    cursor: grabbing;
+}
+
+.joystick-labels {
+    display: flex;
+    gap: 2rem;
+    font-family: monospace;
+    font-size: 14px;
+    color: #333;
+}
+
+.roll-label, .pitch-label {
+    padding: 0.5rem 1rem;
+    background-color: #fff;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 } 
