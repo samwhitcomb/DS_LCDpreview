@@ -1509,8 +1509,7 @@ const flows = {
             }
         }
     ],
-    testing: [
-       
+    'cable charging': [
         {
             title: "Animated Battery 2",
             explanation: "A large battery animating a charging sequence.",
@@ -1783,7 +1782,7 @@ function updateDisplay() {
     const currentState = currentStates[currentStateIndex];
     
     // Update cable visibility based on flow
-    updateCableVisibility(currentFlow === 'testing');
+    updateCableVisibility(currentFlow === 'cable charging');
     
     // Clear canvas
     ctx.fillStyle = '#000';
