@@ -822,6 +822,22 @@ const flows = {
                 
                 // Show cable during animation
                 updateCableVisibility(true);
+
+                // Only show text when the lightning bolt has minimized completely
+                if (fadeProgress >= 1) {
+                    // Draw text at the top
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '15px Barlow';
+                    ctx.fontWeight = '300';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Firmware 1.43', 80, 45);
+
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '20px Barlow';
+                    ctx.fontWeight = '400';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Ready', 80, 66);
+                }
             },
             led: { state: 'breathing', color: 'yellow' },
             onEnter: () => {
@@ -950,6 +966,8 @@ const flows = {
                     currentStateIndex = 2; // Move to Update Complete
                     updateDisplay();
                 }
+
+                updateCableVisibility(true);
             },
             led: { state: 'breathing', color: 'yellow' },
             onEnter: () => {
@@ -1005,6 +1023,8 @@ const flows = {
                     }
                 };
                 animate();
+
+                updateCableVisibility(true);
             }
         },
         {
@@ -1479,126 +1499,6 @@ const flows = {
                                 currentState.draw(ctx, frame++);
                                 requestAnimationFrame(animate);
                             }
-                };
-                animate();
-            }
-        }
-    ],
-    batteryStatus: [
-        {
-            title: "Battery Normal",
-            explanation: "Battery level is normal. Shows in tray position.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Draw battery in tray position
-                drawBattery(ctx, 85);
-                
-                // Draw subtle status text
-                ctx.fillStyle = '#fff';
-                ctx.font = '10px monospace';
-                ctx.textAlign = 'left';
-                ctx.globalAlpha = 0.5;
-                ctx.fillText('Battery: 85%', 10, 15);
-                ctx.globalAlpha = 1;
-            },
-            led: { state: 'on', color: 'green' }
-        },
-        {
-            title: "Battery Low",
-            explanation: "Battery level is low. Shows warning with percentage.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Draw battery in tray position
-                drawBattery(ctx, 15);
-                
-                // Draw warning icon with animation
-                const pulseIntensity = Math.sin(frame * 0.1) * 0.3 + 0.7;
-                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(80, 30, 15, 0, Math.PI * 2);
-                ctx.stroke();
-                
-                // Draw exclamation mark
-                ctx.beginPath();
-                ctx.moveTo(80, 20);
-                ctx.lineTo(80, 35);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.arc(80, 40, 1, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Draw text without fade
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText('Low Battery', 80, 60);
-                ctx.font = '10px monospace';
-                ctx.fillText('15% Remaining', 80, 75);
-            },
-            led: { state: 'on', color: 'green' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Battery Low") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Battery Critical",
-            explanation: "Battery level is critical. Device will shutdown soon.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Draw battery in tray position
-                drawBattery(ctx, 5);
-                
-                // Draw warning icon with faster animation
-                const pulseIntensity = Math.sin(frame * 0.2) * 0.4 + 0.6; // Faster, more intense
-                ctx.strokeStyle = `rgba(255, 0, 0, ${pulseIntensity})`;
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(80, 30, 15, 0, Math.PI * 2);
-                ctx.stroke();
-                
-                // Draw exclamation mark
-                ctx.beginPath();
-                ctx.moveTo(80, 20);
-                ctx.lineTo(80, 35);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.arc(80, 40, 1, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Draw text without fade
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText('Critical Battery', 80, 60);
-                ctx.font = '10px monospace';
-                ctx.fillText('Shutdown Imminent', 80, 75);
-            },
-            led: { state: 'on', color: 'green' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Battery Critical") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
                 };
                 animate();
             }
@@ -2162,7 +2062,1291 @@ const flows = {
             }
         },
        
+    ],
+    ShotState: [
+        {
+            title: "White ready sequence",
+            explanation: "A white loading animation that indicates processing or loading state.",
+            draw: (ctx, frame) => {
+                // Clear the canvas
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+
+                // Draw battery and WiFi
+                drawBattery(ctx, 85);
+                drawWifiStatus(ctx, 'connected', frame, false);
+            },
+            led: { state: 'breathing', color: 'red' }, // Initial LED state is always white breathing
+            onEnter: () => {
+                // Reset LED state to white breathing immediately
+                ledLight.className = 'led-light';
+                ledLight.classList.add('breathing');
+                ledLight.classList.add('red');
+                
+                // Explicitly set the LED state in the current state
+                const currentStates = flows[currentFlow];
+                const currentState = currentStates[currentStateIndex];
+                currentState.led = { state: 'breathing', color: 'red' };
+                
+                // Create a container for the GIF/PNG
+                const gifContainer = document.createElement('div');
+                gifContainer.style.position = 'absolute';
+                gifContainer.style.top = 30 + 'px';
+                gifContainer.style.left = 7 + 'px';
+                gifContainer.style.width = canvas.width*1 + 'px';
+                gifContainer.style.height = canvas.height*1 + 'px';
+                gifContainer.style.zIndex = '0';
+                gifContainer.dataset.gifContainer = 'true'; // Add data attribute for easy selection
+                canvas.parentNode.appendChild(gifContainer);
+
+                // Create and load the image
+                const img = document.createElement('img');
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'contain';
+                gifContainer.appendChild(img);
+
+                // Start the sequence with white loading
+                img.src = 'Assets/White_Loading.gif';
+                
+                let frame = 0;
+                let sequenceStage = 0; // 0: Loading, 1: Ready animation, 2: Ready static
+                let startTime = Date.now();
+                
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "White ready sequence") {
+                        // Calculate elapsed time in milliseconds
+                        const elapsedTime = Date.now() - startTime;
+                        
+                        // State transitions based on time
+                        if (sequenceStage === 0 && elapsedTime >= 5000) {
+                            // After 5 seconds, transition to Ready.gif
+                            img.src = 'Assets/Ready.gif';
+                            sequenceStage = 1;
+                            // Ensure LED stays white breathing
+                            currentState.led = { state: 'on', color: 'green' };
+                            ledLight.className = 'led-light';
+                            ledLight.classList.add('on');
+                            ledLight.classList.add('green');
+                        } else if (sequenceStage === 1 && elapsedTime >= 5850) {
+                            // After 1 more second (6 seconds total), transition to Ready.png
+                            img.src = 'Assets/Ready.png';
+                            sequenceStage = 2;
+                            // Update LED to green
+                            currentState.led = { state: 'on', color: 'green' };
+                            // Update the LED display immediately
+                            ledLight.className = 'led-light';
+                            ledLight.classList.add('on');
+                            ledLight.classList.add('green');
+                        }
+                        
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    } else {
+                        // Cleanup when switching away
+                        if (gifContainer.parentNode) {
+                            gifContainer.parentNode.removeChild(gifContainer);
+                        }
+                    }
+                };
+                animate();
+                
+                // Return a cleanup function
+                return {
+                    destroy: () => {
+                        if (gifContainer.parentNode) {
+                            gifContainer.parentNode.removeChild(gifContainer);
+                        }
+                    }
+                };
+            }
+        },
+        {
+            title: "Blue Loading Animation",
+            explanation: "A blue loading animation that indicates processing or loading state.",
+            draw: (ctx, frame) => {
+                // Clear the canvas
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+
+                // Draw battery and WiFi
+                drawBattery(ctx, 85);
+                drawWifiStatus(ctx, 'connected', frame, false);
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                // Create a container for the GIF
+                const gifContainer = document.createElement('div');
+                gifContainer.style.position = 'absolute';
+                gifContainer.style.top = canvas.offsetTop + 'px';
+                gifContainer.style.left = (canvas.offsetLeft + 5) + 'px';  // Move 5px right
+                gifContainer.style.width = canvas.width + 'px';
+                gifContainer.style.height = canvas.height + 'px';
+                gifContainer.style.zIndex = '0';  // Set to background
+                canvas.parentNode.appendChild(gifContainer);
+
+                // Create and load the image
+                const img = document.createElement('img');
+                img.src = 'Assets/Blue_Loading.gif';
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                gifContainer.appendChild(img);
+
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Blue Loading Animation") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    } else {
+                        // Cleanup when switching away
+                        if (gifContainer.parentNode) {
+                            gifContainer.parentNode.removeChild(gifContainer);
+                        }
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "White Loading Animation",
+            explanation: "A white loading animation that indicates processing or loading state.",
+            draw: (ctx, frame) => {
+                // Clear the canvas
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+
+                // Draw battery and WiFi
+                drawBattery(ctx, 85);
+                drawWifiStatus(ctx, 'connected', frame, false);
+            },
+            led: { state: 'breathing', color: 'white' },
+            onEnter: () => {
+                // Create a container for the GIF
+                const gifContainer = document.createElement('div');
+                gifContainer.style.position = 'absolute';
+                gifContainer.style.top = 30 + 'px';
+                gifContainer.style.left = 25 + 'px';  // Move 5px right
+                gifContainer.style.width = canvas.width*0.8 + 'px';
+                gifContainer.style.height = canvas.height*0.8 + 'px';
+                gifContainer.style.zIndex = '0';  // Set to background
+                canvas.parentNode.appendChild(gifContainer);
+
+                // Create and load the image
+                const img = document.createElement('img');
+                img.src = 'Assets/White_Loading.gif';
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                gifContainer.appendChild(img);
+
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "White Loading Animation") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    } else {
+                        // Cleanup when switching away
+                        if (gifContainer.parentNode) {
+                            gifContainer.parentNode.removeChild(gifContainer);
+                        }
+                    }
+                };
+                animate();
+            }
+        }
     ]
+
+   /* Archive: [
+        {
+            title: "Juggling Balls",
+            explanation: "Animation with juggling baseball balls similar to Google's loading animation.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Center position
+                const centerX = 80;
+                const centerY = 40;
+                
+                // Draw juggling balls
+                const ballCount = 3;
+                const ballRadius = 8;
+                const ballSpacing = 25;  // Horizontal spacing between balls
+                const bounceHeight = 15; // Vertical bounce height
+                const baseY = centerY + 5; // Base position for balls
+                
+                // Draw each ball
+                for (let i = 0; i < ballCount; i++) {
+                    // Calculate time offset for each ball
+                    const timeOffset = (i / ballCount) * Math.PI * 2;
+                    const ballX = centerX + (i - (ballCount-1)/2) * ballSpacing;
+                    
+                    // Calculate vertical position with bounce effect
+                    const bounceSpeed = 0.05;
+                    const bounceOffset = Math.sin(frame * bounceSpeed + timeOffset) * bounceHeight;
+                    const ballY = baseY - Math.abs(bounceOffset); // Use abs to keep bounce above baseline
+                    
+                    // Draw ball shadow (subtle ellipse)
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                    ctx.beginPath();
+                    ctx.ellipse(ballX, baseY + 10, ballRadius * 0.8, ballRadius * 0.3, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw baseball
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw red stitches
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 1;
+                    
+                    // Rotate based on bounce
+                    ctx.save();
+                    ctx.translate(ballX, ballY);
+                    ctx.rotate(frame * 0.05 + i * 2); // Each ball rotates differently
+                    
+                    // Draw curved stitches
+                    ctx.beginPath();
+                    ctx.arc(0, 0, ballRadius * 0.6, Math.PI/6, Math.PI - Math.PI/6);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(0, 0, ballRadius * 0.6, Math.PI + Math.PI/6, Math.PI * 2 - Math.PI/6);
+                    ctx.stroke();
+                    
+                    ctx.restore();
+                }
+                
+                // Draw battery and WiFi
+                drawBattery(ctx, 85);
+                drawWifiStatus(ctx, 'connected', frame, false);
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Juggling Balls") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Lottie-Style Loader",
+            explanation: "Modern, smooth circular loader similar to Lottie animations that morphs between states.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                const centerX = 80;
+                const centerY = 40;
+                
+                // Define state cycle duration and calculate current state
+                const stateCycleDuration = 400; // Total frames for full cycle
+                const cyclePosition = frame % stateCycleDuration;
+                
+                // Define state transitions
+                const stateTransitions = [
+                    { name: 'loading', duration: 200, color: '#4285F4' }, // Google blue
+                    { name: 'ready', duration: 100, color: '#34A853' },   // Google green
+                    { name: 'not-ready', duration: 100, color: '#EA4335' } // Google red
+                ];
+                
+                // Calculate current state and progress
+                let stateIndex = 0;
+                let frameInState = cyclePosition;
+                let totalDuration = 0;
+                
+                for (let i = 0; i < stateTransitions.length; i++) {
+                    if (frameInState < stateTransitions[i].duration) {
+                        stateIndex = i;
+                        break;
+                    }
+                    frameInState -= stateTransitions[i].duration;
+                    totalDuration += stateTransitions[i].duration;
+                }
+                
+                const currentState = stateTransitions[stateIndex];
+                const nextStateIndex = (stateIndex + 1) % stateTransitions.length;
+                const nextState = stateTransitions[nextStateIndex];
+                
+                // Calculate transition progress (last 30 frames of each state)
+                const transitionDuration = 30;
+                const stateProgress = frameInState / currentState.duration;
+                const isTransitioning = frameInState > (currentState.duration - transitionDuration);
+                const transitionProgress = isTransitioning ? 
+                    (frameInState - (currentState.duration - transitionDuration)) / transitionDuration : 0;
+                
+                // Interpolate colors for transition
+                const color = isTransitioning ? 
+                    interpolateColor(currentState.color, nextState.color, transitionProgress) : 
+                    currentState.color;
+                
+                // Draw based on current state
+                if (currentState.name === 'loading') {
+                    drawLottieLoader(ctx, centerX, centerY, frame, color, isTransitioning, transitionProgress, nextState.name);
+                } else if (currentState.name === 'ready') {
+                    drawLottieReady(ctx, centerX, centerY, color, isTransitioning, transitionProgress);
+                } else if (currentState.name === 'not-ready') {
+                    drawLottieNotReady(ctx, centerX, centerY, color, isTransitioning, transitionProgress);
+                }
+                
+                // Draw battery and WiFi
+                drawBattery(ctx, 85);
+                drawWifiStatus(ctx, 'connected', frame, false);
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Lottie-Style Loader") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Scanning Wipe",
+            explanation: "A full-screen scanning wipe effect that suggests system processing or calibration.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+
+                // --- Background Grid ---
+                const gridSize = 10;
+                ctx.strokeStyle = 'rgba(0, 136, 255, 0.1)'; // Faint blue grid
+                ctx.lineWidth = 0.5;
+                for (let x = 0; x < 160; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, 80);
+                    ctx.stroke();
+                }
+                for (let y = 0; y < 80; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(160, y);
+                    ctx.stroke();
+                }
+
+                // --- Scanning Wipe ---
+                const wipeDuration = 120; // 2 seconds for one sweep
+                const cyclePosition = (frame % wipeDuration) / wipeDuration; // 0 to 1
+                const wipeX = cyclePosition * 160;
+
+                // --- Gradient for the wipe ---
+                const gradient = ctx.createLinearGradient(wipeX - 20, 0, wipeX + 20, 0);
+                gradient.addColorStop(0, 'rgba(0, 136, 255, 0)');
+                gradient.addColorStop(0.5, 'rgba(0, 200, 255, 0.7)');
+                gradient.addColorStop(1, 'rgba(0, 136, 255, 0)');
+
+                ctx.fillStyle = gradient;
+                ctx.fillRect(wipeX - 20, 0, 40, 80);
+
+                // --- Bright leading edge ---
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(wipeX, 0, 1.5, 80);
+
+                // --- Horizontal Scan Lines ---
+                const lineCount = 40;
+                for (let i = 0; i < lineCount; i++) {
+                    const y = (i / lineCount) * 80;
+                    const opacity = Math.sin(frame * 0.1 + i * 0.5) * 0.1 + 0.1;
+                    ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+                    ctx.fillRect(0, y, 160, 1);
+                }
+
+                // --- Overlay Text (Optional) ---
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.font = '14px Barlow';
+                ctx.textAlign = 'center';
+                ctx.fillText('ANALYZING...', 80, 45);
+
+
+                // Draw battery and WiFi
+                drawBattery(ctx, 85);
+                drawWifiStatus(ctx, 'connected', frame, false);
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Scanning Wipe") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "State Transitions",
+            explanation: "Seamless morphing transitions between loading, ready, and not ready states.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Define state cycle duration and calculate current state
+                const stateDuration = 180; // 3 seconds per state at 60fps
+                const totalCycleDuration = stateDuration * 3; // 3 states total
+                const cyclePosition = frame % totalCycleDuration;
+                
+                // Determine current state and transition progress
+                let currentState, nextState, transitionProgress;
+                const transitionDuration = 60; // 1 second transition
+                
+                if (cyclePosition < stateDuration) {
+                    // Loading state (blue)
+                    currentState = 'loading';
+                    nextState = 'ready';
+                    transitionProgress = Math.max(0, (cyclePosition - (stateDuration - transitionDuration)) / transitionDuration);
+                } else if (cyclePosition < stateDuration * 2) {
+                    // Ready state (green)
+                    currentState = 'ready';
+                    nextState = 'not-ready';
+                    transitionProgress = Math.max(0, (cyclePosition - (stateDuration * 2 - transitionDuration)) / transitionDuration);
+                } else {
+                    // Not ready state (red)
+                    currentState = 'not-ready';
+                    nextState = 'loading';
+                    transitionProgress = Math.max(0, (cyclePosition - (stateDuration * 3 - transitionDuration)) / transitionDuration);
+                }
+                
+                // Get base colors for current and next states
+                const stateColors = {
+                    'loading': '#0088ff',   // Blue
+                    'ready': '#00ff00',     // Green
+                    'not-ready': '#ff0000'  // Red
+                };
+                
+                const currentColor = stateColors[currentState];
+                const nextColor = stateColors[nextState];
+                
+                // Draw state indicator
+                const centerX = 80;
+                const centerY = 40;
+                const circleRadius = 25;
+                
+                // Draw state label
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                
+                // Show state name with fade effect during transition
+                if (transitionProgress > 0) {
+                    // Current state name fades out
+                    ctx.globalAlpha = 1 - transitionProgress;
+                    ctx.fillText(currentState.toUpperCase(), centerX, 15);
+                    
+                    // Next state name fades in
+                    ctx.globalAlpha = transitionProgress;
+                    ctx.fillText(nextState.toUpperCase(), centerX, 15);
+                } else {
+                    // Just show current state
+                    ctx.fillText(currentState.toUpperCase(), centerX, 15);
+                }
+                ctx.globalAlpha = 1;
+                
+                // Draw main visual based on state
+                if (currentState === 'loading' && transitionProgress === 0) {
+                    // Pure loading state - draw data visualization spinner
+                    drawLoadingSpinner(ctx, centerX, centerY, circleRadius, frame, currentColor);
+                } else if (currentState === 'ready' && transitionProgress === 0) {
+                    // Pure ready state - draw checkmark
+                    drawCheckmark(ctx, centerX, centerY, circleRadius, currentColor);
+                } else if (currentState === 'not-ready' && transitionProgress === 0) {
+                    // Pure not-ready state - draw X mark
+                    drawXmark(ctx, centerX, centerY, circleRadius, currentColor);
+                } else {
+                    // Transition between states
+                    if (currentState === 'loading' && nextState === 'ready') {
+                        // Morph from spinner to checkmark
+                        morphSpinnerToCheckmark(ctx, centerX, centerY, circleRadius, frame, transitionProgress, currentColor, nextColor);
+                    } else if (currentState === 'ready' && nextState === 'not-ready') {
+                        // Morph from checkmark to X
+                        morphCheckmarkToX(ctx, centerX, centerY, circleRadius, transitionProgress, currentColor, nextColor);
+                    } else if (currentState === 'not-ready' && nextState === 'loading') {
+                        // Morph from X to spinner
+                        morphXToSpinner(ctx, centerX, centerY, circleRadius, frame, transitionProgress, currentColor, nextColor);
+                    }
+                }
+                
+                // Draw state progress indicator
+                const progressWidth = 120;
+                const progressHeight = 4;
+                const progressX = (160 - progressWidth) / 2;
+                const progressY = 70;
+                
+                // Draw background bar
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.fillRect(progressX, progressY, progressWidth, progressHeight);
+                
+                // Calculate progress within current state (excluding transition)
+                let stateProgress;
+                if (cyclePosition < stateDuration) {
+                    stateProgress = cyclePosition / stateDuration;
+                } else if (cyclePosition < stateDuration * 2) {
+                    stateProgress = (cyclePosition - stateDuration) / stateDuration;
+                } else {
+                    stateProgress = (cyclePosition - stateDuration * 2) / stateDuration;
+                }
+                
+                // Draw progress fill
+                ctx.fillStyle = currentColor;
+                ctx.fillRect(progressX, progressY, progressWidth * stateProgress, progressHeight);
+                
+                // Draw battery and WiFi
+                drawBattery(ctx, 85);
+                drawWifiStatus(ctx, 'connected', frame, false);
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "State Transitions") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Vertical Equalizer",
+            explanation: "Classic stereo equalizer with vertical bars that bounce to an invisible beat.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Parameters for equalizer
+                const barCount = 16;       // Number of bars
+                const barWidth = 7;       // Width of each bar
+                const barSpacing = 3;     // Space between bars
+                const maxBarHeight = 60;  // Maximum height of bars
+                const baseY = 75;         // Base position (bottom of bars)
+                
+                // Generate pseudo-random heights with smooth transitions
+                for (let i = 0; i < barCount; i++) {
+                    // Create semi-random pattern with different frequencies
+                    const timeOffset = i * 0.2;
+                    const freq1 = 0.03 + (i % 3) * 0.01;
+                    const freq2 = 0.06 - (i % 5) * 0.005;
+                    const freq3 = 0.02 + (i % 7) * 0.008;
+                    
+                    // Combine different sine waves for organic movement
+                    const heightPercent = 
+                        0.2 + // Base height so bars never disappear
+                        0.3 * Math.sin(frame * freq1 + timeOffset) + 
+                        0.3 * Math.sin(frame * freq2 + timeOffset * 2.5) +
+                        0.2 * Math.sin(frame * freq3 + timeOffset * 0.7);
+                    
+                    // Calculate bar height and position
+                    const barHeight = Math.abs(heightPercent) * maxBarHeight;
+                    const barX = 10 + i * (barWidth + barSpacing);
+                    
+                    // Create gradient for each bar
+                    const gradient = ctx.createLinearGradient(barX, baseY, barX, baseY - barHeight);
+                    gradient.addColorStop(0, '#00ff00');    // Green at bottom
+                    gradient.addColorStop(0.6, '#ffff00');  // Yellow in middle
+                    gradient.addColorStop(1, '#ff0000');    // Red at top
+                    
+                    // Draw bar
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(barX, baseY - barHeight, barWidth, barHeight);
+                    
+                    // Add shine effect
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.fillRect(barX, baseY - barHeight, barWidth / 3, barHeight);
+                }
+                
+                // Draw battery and WiFi
+                drawBattery(ctx, 85);
+                drawWifiStatus(ctx, 'connected', frame, false);
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Vertical Equalizer") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Circular Equalizer",
+            explanation: "Radial equalizer with bars emanating from the center.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Define center and parameters
+                const centerX = 80;
+                const centerY = 40;
+                const barCount = 32;     // Number of bars around the circle
+                const minRadius = 5;     // Inner radius
+                const maxRadius = 30;    // Maximum bar length
+                const barWidth = 3;      // Width of each bar in degrees
+                
+                // Draw each bar in the circular equalizer
+                for (let i = 0; i < barCount; i++) {
+                    // Calculate angle for this bar
+                    const angle = (i / barCount) * Math.PI * 2;
+                    
+                    // Create semi-random heights with multiple frequencies
+                    const timeOffset = i * 0.2;
+                    const freq1 = 0.03 + (i % 3) * 0.01;
+                    const freq2 = 0.05 - (i % 4) * 0.008;
+                    
+                    // Generate bar length with smooth transition
+                    const barPercent = 
+                        0.4 + // Base length
+                        0.6 * Math.abs(Math.sin(frame * freq1 + timeOffset) * 
+                               Math.cos(frame * freq2 + timeOffset * 1.5));
+                    
+                    const barLength = minRadius + barPercent * maxRadius;
+                    
+                    // Calculate start and end points
+                    const innerX = centerX + Math.cos(angle) * minRadius;
+                    const innerY = centerY + Math.sin(angle) * minRadius;
+                    const outerX = centerX + Math.cos(angle) * barLength;
+                    const outerY = centerY + Math.sin(angle) * barLength;
+                    
+                    // Draw bar
+                    ctx.beginPath();
+                    ctx.lineWidth = barWidth;
+                    
+                    // Create gradient based on length
+                    const gradient = ctx.createLinearGradient(innerX, innerY, outerX, outerY);
+                    gradient.addColorStop(0, '#0088ff');
+                    gradient.addColorStop(1, '#00ffff');
+                    
+                    ctx.strokeStyle = gradient;
+                    ctx.moveTo(innerX, innerY);
+                    ctx.lineTo(outerX, outerY);
+                    ctx.stroke();
+                }
+                
+                // Draw small baseball in center
+                const ballRadius = 4;
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, ballRadius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw simplified red stitches
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, ballRadius * 0.6, 0, Math.PI);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, ballRadius * 0.6, Math.PI, Math.PI * 2);
+                ctx.stroke();
+                
+                // Draw battery and WiFi
+                drawBattery(ctx, 85);
+                drawWifiStatus(ctx, 'connected', frame, false);
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Circular Equalizer") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Waveform Visualizer",
+            explanation: "Dynamic audio waveform visualization that morphs and pulses.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Waveform parameters
+                const width = 160;
+                const height = 80;
+                const centerY = height / 2;
+                const points = 160;  // One point per pixel width
+                const maxAmplitude = 25;  // Maximum height of wave
+                
+                // Draw waveform
+                ctx.beginPath();
+                ctx.lineWidth = 2;
+                
+                // Create gradient for the wave
+                const gradient = ctx.createLinearGradient(0, centerY - maxAmplitude, 0, centerY + maxAmplitude);
+                gradient.addColorStop(0, '#ff0088');
+                gradient.addColorStop(0.5, '#0088ff');
+                gradient.addColorStop(1, '#ff0088');
+                ctx.strokeStyle = gradient;
+                
+                // Calculate each point of the waveform
+                for (let i = 0; i < points; i++) {
+                    const x = i;
+                    
+                    // Combine multiple frequencies for a complex wave
+                    const freq1 = 0.02; // Base frequency
+                    const freq2 = 0.06; // Higher frequency
+                    const freq3 = 0.001; // Very low frequency for slow modulation
+                    
+                    // Calculate y-coordinate with multiple waves
+                    const amplitude = 
+                        Math.sin(frame * freq3) * 0.3 + 0.7; // Overall amplitude modulation
+                    
+                    const y = centerY + 
+                        amplitude * maxAmplitude * Math.sin(frame * freq1 + i * 0.05) * 
+                        Math.cos(frame * freq2 + i * 0.03);
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+                
+                // Add highlight/glow effect
+                ctx.globalAlpha = 0.5;
+                ctx.lineWidth = 4;
+                ctx.stroke();
+                ctx.globalAlpha = 0.2;
+                ctx.lineWidth = 6;
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+                
+                // Draw a reflection
+                ctx.globalAlpha = 0.2;
+                ctx.scale(1, -0.2); // Flatten the reflection
+                ctx.translate(0, -height * 3.5); // Move the reflection below
+                ctx.stroke(); // Redraw the path for reflection
+                ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+                ctx.globalAlpha = 1;
+                
+                // Draw battery and WiFi
+                drawBattery(ctx, 85);
+                drawWifiStatus(ctx, 'connected', frame, false);
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Waveform Visualizer") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Dynamic Histogram",
+            explanation: "Baseball-themed dynamic histogram showing data processing.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw axes
+                const marginLeft = 15;
+                const marginBottom = 15;
+                const graphWidth = 135;
+                const graphHeight = 55;
+                const originX = marginLeft;
+                const originY = 80 - marginBottom;
+                
+                // Draw axes with slightly brighter color
+                ctx.strokeStyle = '#444';
+                ctx.lineWidth = 1;
+                
+                // X-axis
+                ctx.beginPath();
+                ctx.moveTo(originX, originY);
+                ctx.lineTo(originX + graphWidth, originY);
+                ctx.stroke();
+                
+                // Y-axis
+                ctx.beginPath();
+                ctx.moveTo(originX, originY);
+                ctx.lineTo(originX, originY - graphHeight);
+                ctx.stroke();
+                
+                // Draw histogram bars
+                const barCount = 12;
+                const barWidth = graphWidth / barCount * 0.7;
+                const barSpacing = graphWidth / barCount * 0.3;
+                
+                for (let i = 0; i < barCount; i++) {
+                    // Calculate semi-random heights that change over time
+                    const baseFreq = 0.02;
+                    const freq1 = baseFreq + (i % 3) * 0.005;
+                    const freq2 = baseFreq - (i % 5) * 0.002;
+                    const timeOffset = i * 0.5;
+                    
+                    // Create a distribution-like curve with central tendency
+                    const distanceFactor = 1 - Math.abs((i - barCount/2) / (barCount/2));
+                    const heightBase = 0.3 + distanceFactor * 0.7; // Base height follows a curve
+                    
+                    // Add time-based variation
+                    const variation = 
+                        0.3 * Math.sin(frame * freq1 + timeOffset) * 
+                        Math.cos(frame * freq2 + timeOffset * 1.2);
+                    
+                    // Calculate final height percentage (0-1)
+                    const heightPercent = Math.max(0.1, Math.min(1, heightBase + variation));
+                    
+                    // Calculate bar dimensions
+                    const barHeight = heightPercent * graphHeight;
+                    const barX = originX + i * (barWidth + barSpacing);
+                    const barY = originY - barHeight;
+                    
+                    // Create gradient based on height
+                    const gradient = ctx.createLinearGradient(barX, barY, barX, originY);
+                    
+                    // Use baseball colors (white with red accent)
+                    gradient.addColorStop(0, i === Math.floor(barCount/2) ? '#ff6666' : '#cccccc');
+                    gradient.addColorStop(1, i === Math.floor(barCount/2) ? '#ff0000' : '#ffffff');
+                    
+                    // Draw bar
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(barX, barY, barWidth, barHeight);
+                    
+                    // Add highlight effect
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.fillRect(barX, barY, barWidth * 0.3, barHeight);
+                    
+                    // Add top line accent
+                    ctx.strokeStyle = i === Math.floor(barCount/2) ? '#ff0000' : '#ffffff';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(barX, barY);
+                    ctx.lineTo(barX + barWidth, barY);
+                    ctx.stroke();
+                }
+                
+                // Draw a small baseball icon near origin
+                const ballX = originX - 7;
+                const ballY = originY + 7;
+                const ballRadius = 5;
+                
+                // Draw ball
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw simplified stitches
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 0.8;
+                ctx.beginPath();
+                ctx.arc(ballX, ballY, ballRadius * 0.6, 0, Math.PI);
+                ctx.stroke();
+                
+                // Draw battery and WiFi
+                drawBattery(ctx, 85);
+                drawWifiStatus(ctx, 'connected', frame, false);
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Dynamic Histogram") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Data Visualization",
+            explanation: "Complex data processing visualization with radar and network.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Center point
+                const centerX = 80;
+                const centerY = 40;
+                
+                // Draw processing animation - data analysis visualization
+                
+                // 1. Draw radar-like scanning effect
+                const scanAngle = (frame * 0.1) % (Math.PI * 2);
+                const scanRadius = 25;
+                
+                ctx.strokeStyle = '#0088ff';
+                ctx.lineWidth = 2;
+                
+                // Draw radar scan line
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(
+                    centerX + Math.cos(scanAngle) * scanRadius,
+                    centerY + Math.sin(scanAngle) * scanRadius
+                );
+                ctx.stroke();
+                
+                // Draw fading trail
+                for (let i = 1; i <= 8; i++) {
+                    const trailAngle = scanAngle - (i * 0.2);
+                    const opacity = 1 - (i / 8);
+                    
+                    ctx.strokeStyle = `rgba(0, 136, 255, ${opacity * 0.7})`;
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY);
+                    ctx.lineTo(
+                        centerX + Math.cos(trailAngle) * scanRadius,
+                        centerY + Math.sin(trailAngle) * scanRadius
+                    );
+                    ctx.stroke();
+                }
+                
+                // 2. Draw concentric processing circles
+                const maxCircles = 3;
+                for (let i = 0; i < maxCircles; i++) {
+                    // Calculate size and opacity based on time offset
+                    const circleProgress = (frame * 0.03 + i * (1/maxCircles)) % 1;
+                    const radius = circleProgress * 25; // Max radius of 25px
+                    const opacity = 1 - circleProgress; // Fade out as it expands
+                    
+                    ctx.strokeStyle = `rgba(0, 136, 255, ${opacity * 0.7})`;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                
+                // 3. Draw data points and connections
+                const dataPoints = 6;
+                const dataRadius = 18;
+                
+                for (let i = 0; i < dataPoints; i++) {
+                    const angle = (i / dataPoints) * Math.PI * 2;
+                    const x = centerX + Math.cos(angle) * dataRadius;
+                    const y = centerY + Math.sin(angle) * dataRadius;
+                    
+                    // Draw connection to next point
+                    const nextI = (i + 1) % dataPoints;
+                    const nextAngle = (nextI / dataPoints) * Math.PI * 2;
+                    const nextX = centerX + Math.cos(nextAngle) * dataRadius;
+                    const nextY = centerY + Math.sin(nextAngle) * dataRadius;
+                    
+                    // Determine if this connection should be highlighted
+                    const highlightIndex = Math.floor(frame * 0.1) % dataPoints;
+                    const isHighlighted = (i === highlightIndex);
+                    
+                    ctx.strokeStyle = isHighlighted ? '#00ffff' : 'rgba(0, 136, 255, 0.5)';
+                    ctx.lineWidth = isHighlighted ? 2 : 1;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(nextX, nextY);
+                    ctx.stroke();
+                    
+                    // Draw data point
+                    ctx.fillStyle = isHighlighted ? '#00ffff' : '#0088ff';
+                    ctx.beginPath();
+                    ctx.arc(x, y, isHighlighted ? 3 : 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Draw central node
+                ctx.fillStyle = '#0088ff';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw battery and WiFi
+                drawBattery(ctx, 85);
+                drawWifiStatus(ctx, 'connected', frame, false);
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Data Visualization") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Juggling Balls",
+            explanation: "Animation with juggling baseball balls similar to Google's loading animation.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Center position
+                const centerX = 80;
+                const centerY = 40;
+                
+                // Draw juggling balls
+                const ballCount = 3;
+                const ballRadius = 8;
+                const ballSpacing = 25;  // Horizontal spacing between balls
+                const bounceHeight = 15; // Vertical bounce height
+                const baseY = centerY + 5; // Base position for balls
+                
+                // Draw each ball
+                for (let i = 0; i < ballCount; i++) {
+                    // Calculate time offset for each ball
+                    const timeOffset = (i / ballCount) * Math.PI * 2;
+                    const ballX = centerX + (i - (ballCount-1)/2) * ballSpacing;
+                    
+                    // Calculate vertical position with bounce effect
+                    const bounceSpeed = 0.05;
+                    const bounceOffset = Math.sin(frame * bounceSpeed + timeOffset) * bounceHeight;
+                    const ballY = baseY - Math.abs(bounceOffset); // Use abs to keep bounce above baseline
+                    
+                    // Draw ball shadow (subtle ellipse)
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                    ctx.beginPath();
+                    ctx.ellipse(ballX, baseY + 10, ballRadius * 0.8, ballRadius * 0.3, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw baseball
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw red stitches
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 1;
+                    
+                    // Rotate based on bounce
+                    ctx.save();
+                    ctx.translate(ballX, ballY);
+                    ctx.rotate(frame * 0.05 + i * 2); // Each ball rotates differently
+                    
+                    // Draw curved stitches
+                    ctx.beginPath();
+                    ctx.arc(0, 0, ballRadius * 0.6, Math.PI/6, Math.PI - Math.PI/6);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(0, 0, ballRadius * 0.6, Math.PI + Math.PI/6, Math.PI * 2 - Math.PI/6);
+                    ctx.stroke();
+                    
+                    ctx.restore();
+                }
+                
+                // Draw battery and WiFi
+                drawBattery(ctx, 85);
+                drawWifiStatus(ctx, 'connected', frame, false);
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Juggling Balls") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Lottie Morphing Loader",
+            explanation: "A Lottie-style animation that morphs into success and fail states.",
+            draw: (ctx, frame) => {
+                // This is intentionally left blank, as the animation is handled
+                // by the Lottie library in a separate DOM element created in onEnter.
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                // Create a container for the Lottie animation
+                const lottieContainer = document.createElement('div');
+                lottieContainer.style.position = 'absolute';
+                lottieContainer.style.top = canvas.offsetTop + 'px';
+                lottieContainer.style.left = canvas.offsetLeft + 'px';
+                lottieContainer.style.width = canvas.width + 'px';
+                lottieContainer.style.height = canvas.height + 'px';
+                lottieContainer.style.zIndex = '10';
+                lottieContainer.style.transition = 'opacity 0.5s ease-in-out';
+                canvas.parentNode.appendChild(lottieContainer);
+
+                // Load the Lottie animation
+                const anim = lottie.loadAnimation({
+                    container: lottieContainer,
+                    renderer: 'svg',
+                    loop: true,
+                    autoplay: true,
+                    path: 'Lotties/Loading.json'
+                });
+
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+
+                    if (currentState.title === "Lottie Morphing Loader") {
+                        frame++;
+                        const stateDuration = 180; // 3s per state
+                        const morphDuration = 60; // 1s morph
+                        const cycle = (stateDuration + morphDuration) * 3;
+                        const pos = frame % cycle;
+
+                        ctx.clearRect(0, 0, 160, 80);
+
+                        if (pos < stateDuration) {
+                            // State 1: Loading (Lottie is visible)
+                            lottieContainer.style.opacity = '1';
+                        } else if (pos < stateDuration + morphDuration) {
+                            // Morph to Success
+                            const progress = (pos - stateDuration) / morphDuration;
+                            lottieContainer.style.opacity = 1 - progress;
+                            drawMorphToSuccess(ctx, progress);
+                        } else if (pos < stateDuration * 2 + morphDuration) {
+                            // State 2: Success
+                            lottieContainer.style.opacity = '0';
+                            drawMorphToSuccess(ctx, 1); // Draw final success state
+                        } else if (pos < stateDuration * 2 + morphDuration * 2) {
+                            // Morph to Fail
+                            const progress = (pos - (stateDuration * 2 + morphDuration)) / morphDuration;
+                            drawMorphToFail(ctx, progress);
+                        } else if (pos < stateDuration * 3 + morphDuration * 2) {
+                            // State 3: Fail
+                            lottieContainer.style.opacity = '0';
+                            drawMorphToFail(ctx, 1); // Draw final fail state
+                        } else {
+                            // Morph back to Loading
+                            const progress = (pos - (stateDuration * 3 + morphDuration * 2)) / morphDuration;
+                            lottieContainer.style.opacity = progress;
+                            drawMorphToFail(ctx, 1 - progress); // Reverse morph to fail (back to circle)
+                        }
+
+                        requestAnimationFrame(animate);
+                    } else {
+                        // Cleanup when the user switches away from this animation
+                        anim.destroy();
+                        if (lottieContainer.parentNode) {
+                            lottieContainer.parentNode.removeChild(lottieContainer);
+                        }
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Scanning Wipe",
+            explanation: "A full-screen scanning wipe effect that suggests system processing or calibration.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+
+                // --- Background Grid ---
+                const gridSize = 10;
+                ctx.strokeStyle = 'rgba(0, 136, 255, 0.1)'; // Faint blue grid
+                ctx.lineWidth = 0.5;
+                for (let x = 0; x < 160; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, 80);
+                    ctx.stroke();
+                }
+                for (let y = 0; y < 80; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(160, y);
+                    ctx.stroke();
+                }
+
+                // --- Scanning Wipe ---
+                const wipeDuration = 120; // 2 seconds for one sweep
+                const cyclePosition = (frame % wipeDuration) / wipeDuration; // 0 to 1
+                const wipeX = cyclePosition * 160;
+
+                // --- Gradient for the wipe ---
+                const gradient = ctx.createLinearGradient(wipeX - 20, 0, wipeX + 20, 0);
+                gradient.addColorStop(0, 'rgba(0, 136, 255, 0)');
+                gradient.addColorStop(0.5, 'rgba(0, 200, 255, 0.7)');
+                gradient.addColorStop(1, 'rgba(0, 136, 255, 0)');
+
+                ctx.fillStyle = gradient;
+                ctx.fillRect(wipeX - 20, 0, 40, 80);
+
+                // --- Bright leading edge ---
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(wipeX, 0, 1.5, 80);
+
+                // --- Horizontal Scan Lines ---
+                const lineCount = 40;
+                for (let i = 0; i < lineCount; i++) {
+                    const y = (i / lineCount) * 80;
+                    const opacity = Math.sin(frame * 0.1 + i * 0.5) * 0.1 + 0.1;
+                    ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+                    ctx.fillRect(0, y, 160, 1);
+                }
+
+                // --- Overlay Text (Optional) ---
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.font = '14px Barlow';
+                ctx.textAlign = 'center';
+                ctx.fillText('ANALYZING...', 80, 45);
+
+
+                // Draw battery and WiFi
+                drawBattery(ctx, 85);
+                drawWifiStatus(ctx, 'connected', frame, false);
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Scanning Wipe") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        }
+    ],*/
+   
 };
 
 // Initialize canvas
@@ -2388,6 +3572,14 @@ function updateDisplay() {
         }
         currentAnimation = null;
     }
+    
+    // Remove any existing gif containers
+    const existingContainers = document.querySelectorAll('[data-gif-container="true"]');
+    existingContainers.forEach(container => {
+        if (container.parentNode) {
+            container.parentNode.removeChild(container);
+        }
+    });
     
     // Show/hide power arrow based on state
     const powerArrow = document.querySelector('.power-arrow-indicator');
@@ -2761,3 +3953,594 @@ function drawAnimatedBattery(ctx, frame, options = {}) {
         ctx.fillText(Math.round(percent) + '%', x + width/2, textY);
     }
 } 
+
+// Helper functions for State Transitions animation
+function drawLoadingSpinner(ctx, x, y, radius, frame, color) {
+    // Draw spinning segments
+    const segments = 8;
+    const segmentAngle = (Math.PI * 2) / segments;
+    const rotationSpeed = 0.05;
+    const rotation = frame * rotationSpeed;
+    
+    for (let i = 0; i < segments; i++) {
+        const angle = rotation + i * segmentAngle;
+        const opacity = 0.3 + (0.7 * (i / segments));
+        
+        ctx.strokeStyle = color.replace(')', `, ${opacity})`).replace('rgb', 'rgba');
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, angle, angle + segmentAngle * 0.7);
+        ctx.stroke();
+    }
+    
+    // Draw center dot
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+function drawCheckmark(ctx, x, y, radius, color) {
+    // Draw circle
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Draw checkmark
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x - 10, y);
+    ctx.lineTo(x - 3, y + 8);
+    ctx.lineTo(x + 12, y - 10);
+    ctx.stroke();
+}
+
+function drawXmark(ctx, x, y, radius, color) {
+    // Draw circle
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Draw X
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x - 10, y - 10);
+    ctx.lineTo(x + 10, y + 10);
+    ctx.moveTo(x + 10, y - 10);
+    ctx.lineTo(x - 10, y + 10);
+    ctx.stroke();
+}
+
+function morphSpinnerToCheckmark(ctx, x, y, radius, frame, progress, fromColor, toColor) {
+    // Interpolate color
+    const color = interpolateColor(fromColor, toColor, progress);
+    
+    // Draw circle (common to both)
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Draw fading spinner
+    if (progress < 0.5) {
+        const spinnerOpacity = 1 - (progress * 2);
+        const segments = 8;
+        const segmentAngle = (Math.PI * 2) / segments;
+        const rotationSpeed = 0.05;
+        const rotation = frame * rotationSpeed;
+        
+        for (let i = 0; i < segments; i++) {
+            const angle = rotation + i * segmentAngle;
+            const opacity = (0.3 + (0.7 * (i / segments))) * spinnerOpacity;
+            
+            ctx.strokeStyle = color.replace(')', `, ${opacity})`).replace('rgb', 'rgba');
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, angle, angle + segmentAngle * 0.7);
+            ctx.stroke();
+        }
+    }
+    
+    // Draw emerging checkmark
+    if (progress > 0.5) {
+        const checkOpacity = (progress - 0.5) * 2;
+        
+        ctx.strokeStyle = color.replace(')', `, ${checkOpacity})`).replace('rgb', 'rgba');
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(x - 10, y);
+        ctx.lineTo(x - 10 + 7 * checkOpacity, y + 8 * checkOpacity);
+        ctx.lineTo(x - 3 + 15 * checkOpacity, y + 8 - 18 * checkOpacity);
+        ctx.stroke();
+    }
+    
+    // Draw center dot that morphs into checkmark start
+    const dotSize = 4 * (1 - progress);
+    if (dotSize > 0) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, dotSize, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function morphCheckmarkToX(ctx, x, y, radius, progress, fromColor, toColor) {
+    // Interpolate color
+    const color = interpolateColor(fromColor, toColor, progress);
+    
+    // Draw circle (common to both)
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Morph checkmark to X
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4;
+    
+    if (progress < 0.5) {
+        // First half: checkmark fades out
+        const checkOpacity = 1 - (progress * 2);
+        ctx.globalAlpha = checkOpacity;
+        
+        // Draw checkmark
+        ctx.beginPath();
+        ctx.moveTo(x - 10, y);
+        ctx.lineTo(x - 3, y + 8);
+        ctx.lineTo(x + 12, y - 10);
+        ctx.stroke();
+        
+        ctx.globalAlpha = 1;
+    } else {
+        // Second half: X fades in
+        const xOpacity = (progress - 0.5) * 2;
+        ctx.globalAlpha = xOpacity;
+        
+        // Draw X
+        ctx.beginPath();
+        ctx.moveTo(x - 10, y - 10);
+        ctx.lineTo(x + 10, y + 10);
+        ctx.moveTo(x + 10, y - 10);
+        ctx.lineTo(x - 10, y + 10);
+        ctx.stroke();
+        
+        ctx.globalAlpha = 1;
+    }
+}
+
+function morphXToSpinner(ctx, x, y, radius, frame, progress, fromColor, toColor) {
+    // Interpolate color
+    const color = interpolateColor(fromColor, toColor, progress);
+    
+    // Draw circle (common to both)
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    if (progress < 0.5) {
+        // First half: X fades out
+        const xOpacity = 1 - (progress * 2);
+        ctx.globalAlpha = xOpacity;
+        
+        // Draw X
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(x - 10, y - 10);
+        ctx.lineTo(x + 10, y + 10);
+        ctx.moveTo(x + 10, y - 10);
+        ctx.lineTo(x - 10, y + 10);
+        ctx.stroke();
+        
+        ctx.globalAlpha = 1;
+    } else {
+        // Second half: spinner fades in
+        const spinnerOpacity = (progress - 0.5) * 2;
+        const segments = 8;
+        const segmentAngle = (Math.PI * 2) / segments;
+        const rotationSpeed = 0.05;
+        const rotation = frame * rotationSpeed;
+        
+        for (let i = 0; i < segments; i++) {
+            const angle = rotation + i * segmentAngle;
+            const opacity = (0.3 + (0.7 * (i / segments))) * spinnerOpacity;
+            
+            ctx.strokeStyle = color.replace(')', `, ${opacity})`).replace('rgb', 'rgba');
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, angle, angle + segmentAngle * 0.7);
+            ctx.stroke();
+        }
+        
+        // Draw center dot
+        const dotSize = 4 * spinnerOpacity;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, dotSize, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function interpolateColor(color1, color2, ratio) {
+    // Extract RGB components
+    const r1 = parseInt(color1.slice(1, 3), 16) || parseInt(color1.match(/\d+/g)[0]);
+    const g1 = parseInt(color1.slice(3, 5), 16) || parseInt(color1.match(/\d+/g)[1]);
+    const b1 = parseInt(color1.slice(5, 7), 16) || parseInt(color1.match(/\d+/g)[2]);
+    
+    const r2 = parseInt(color2.slice(1, 3), 16) || parseInt(color2.match(/\d+/g)[0]);
+    const g2 = parseInt(color2.slice(3, 5), 16) || parseInt(color2.match(/\d+/g)[1]);
+    const b2 = parseInt(color2.slice(5, 7), 16) || parseInt(color2.match(/\d+/g)[2]);
+    
+    // Interpolate
+    const r = Math.round(r1 + (r2 - r1) * ratio);
+    const g = Math.round(g1 + (g2 - g1) * ratio);
+    const b = Math.round(b1 + (b2 - b1) * ratio);
+    
+    return `rgb(${r}, ${g}, ${b})`;
+}
+
+// Additional helper functions for Lottie-Style Loader
+function drawLottieLoader(ctx, x, y, frame, color, isTransitioning, transitionProgress, nextStateName) {
+    const radius = 30;
+    const strokeWidth = 4;
+    
+    // Draw the main circle outline
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = strokeWidth;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Calculate the animated segment
+    const rotationSpeed = 0.03;
+    const baseAngle = frame * rotationSpeed;
+    
+    // For the main circular loader animation
+    if (!isTransitioning) {
+        // Draw the spinning arc that grows and shrinks
+        const growDuration = 60;
+        const shrinkDuration = 60;
+        const fullCycleDuration = growDuration + shrinkDuration;
+        const cyclePosition = frame % fullCycleDuration;
+        
+        let arcLength;
+        if (cyclePosition < growDuration) {
+            // Growing phase
+            arcLength = (cyclePosition / growDuration) * Math.PI * 1.75;
+        } else {
+            // Shrinking phase
+            arcLength = (1 - ((cyclePosition - growDuration) / shrinkDuration)) * Math.PI * 1.75;
+        }
+        
+        // Draw the arc
+        ctx.strokeStyle = color;
+        ctx.lineWidth = strokeWidth;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(x, y, radius, baseAngle, baseAngle + arcLength);
+        ctx.stroke();
+        ctx.lineCap = 'butt'; // Reset cap style
+    } 
+    // Handle transition to next state
+    else {
+        if (nextStateName === 'ready') {
+            // Transition to checkmark
+            const endAngle = baseAngle + Math.PI * 1.5;
+            const arcLength = Math.PI * 1.5 * (1 - transitionProgress);
+            
+            // Draw the transitioning arc
+            ctx.strokeStyle = color;
+            ctx.lineWidth = strokeWidth;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(x, y, radius, baseAngle, baseAngle + arcLength);
+            ctx.stroke();
+            
+            // Draw emerging checkmark
+            if (transitionProgress > 0.3) {
+                const checkProgress = (transitionProgress - 0.3) / 0.7; // Rescale to 0-1
+                ctx.strokeStyle = color;
+                ctx.lineWidth = strokeWidth;
+                ctx.lineCap = 'round';
+                
+                // First part of checkmark
+                ctx.beginPath();
+                const startX = x - 15;
+                const startY = y;
+                const midX = x - 5;
+                const midY = y + 10;
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(startX + (midX - startX) * checkProgress, 
+                           startY + (midY - startY) * checkProgress);
+                ctx.stroke();
+                
+                // Second part of checkmark (only if first part is complete)
+                if (checkProgress > 0.5) {
+                    const check2Progress = (checkProgress - 0.5) / 0.5; // Rescale to 0-1
+                    ctx.beginPath();
+                    ctx.moveTo(midX, midY);
+                    ctx.lineTo(midX + (x + 15 - midX) * check2Progress, 
+                               midY + (y - 15 - midY) * check2Progress);
+                    ctx.stroke();
+                }
+            }
+        } else if (nextStateName === 'not-ready') {
+            // Transition to X mark
+            const arcFadeOut = 1 - transitionProgress;
+            
+            // Fade out the arc
+            if (arcFadeOut > 0) {
+                ctx.strokeStyle = color.replace(')', `, ${arcFadeOut})`).replace('rgb', 'rgba');
+                ctx.lineWidth = strokeWidth;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.arc(x, y, radius, baseAngle, baseAngle + Math.PI);
+                ctx.stroke();
+            }
+            
+            // Draw emerging X
+            if (transitionProgress > 0.3) {
+                const xProgress = (transitionProgress - 0.3) / 0.7; // Rescale to 0-1
+                ctx.strokeStyle = color;
+                ctx.lineWidth = strokeWidth;
+                ctx.lineCap = 'round';
+                
+                // First diagonal of X
+                ctx.beginPath();
+                ctx.moveTo(x - 12, y - 12);
+                ctx.lineTo(x - 12 + 24 * xProgress, y - 12 + 24 * xProgress);
+                ctx.stroke();
+                
+                // Second diagonal of X (only if first is complete enough)
+                if (xProgress > 0.5) {
+                    const x2Progress = (xProgress - 0.5) / 0.5; // Rescale to 0-1
+                    ctx.beginPath();
+                    ctx.moveTo(x + 12, y - 12);
+                    ctx.lineTo(x + 12 - 24 * x2Progress, y - 12 + 24 * x2Progress);
+                    ctx.stroke();
+                }
+            }
+        }
+    }
+}
+
+function drawLottieReady(ctx, x, y, color, isTransitioning, transitionProgress) {
+    const radius = 30;
+    const strokeWidth = 4;
+    
+    // Draw the main circle outline
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = strokeWidth;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // If transitioning to not-ready
+    if (isTransitioning) {
+        // Fade out checkmark
+        const checkOpacity = 1 - transitionProgress;
+        ctx.strokeStyle = color.replace(')', `, ${checkOpacity})`).replace('rgb', 'rgba');
+        
+        // Draw fading checkmark
+        ctx.lineWidth = strokeWidth;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x - 15, y);
+        ctx.lineTo(x - 5, y + 10);
+        ctx.lineTo(x + 15, y - 15);
+        ctx.stroke();
+        
+        // Draw emerging X
+        if (transitionProgress > 0.3) {
+            const xProgress = (transitionProgress - 0.3) / 0.7; // Rescale to 0-1
+            ctx.strokeStyle = color;
+            ctx.lineWidth = strokeWidth;
+            
+            // First diagonal of X
+            ctx.beginPath();
+            ctx.moveTo(x - 12, y - 12);
+            ctx.lineTo(x - 12 + 24 * xProgress, y - 12 + 24 * xProgress);
+            ctx.stroke();
+            
+            // Second diagonal of X (only if first is complete enough)
+            if (xProgress > 0.5) {
+                const x2Progress = (xProgress - 0.5) / 0.5; // Rescale to 0-1
+                ctx.beginPath();
+                ctx.moveTo(x + 12, y - 12);
+                ctx.lineTo(x + 12 - 24 * x2Progress, y - 12 + 24 * x2Progress);
+                ctx.stroke();
+            }
+        }
+    } else {
+        // Draw static checkmark with subtle pulse
+        ctx.strokeStyle = color;
+        ctx.lineWidth = strokeWidth;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x - 15, y);
+        ctx.lineTo(x - 5, y + 10);
+        ctx.lineTo(x + 15, y - 15);
+        ctx.stroke();
+    }
+}
+
+function drawLottieNotReady(ctx, x, y, color, isTransitioning, transitionProgress) {
+    const radius = 30;
+    const strokeWidth = 4;
+    
+    // Draw the main circle outline
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = strokeWidth;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // If transitioning to loading
+    if (isTransitioning) {
+        // Fade out X
+        const xOpacity = 1 - transitionProgress;
+        ctx.strokeStyle = color.replace(')', `, ${xOpacity})`).replace('rgb', 'rgba');
+        
+        // Draw fading X
+        ctx.lineWidth = strokeWidth;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x - 12, y - 12);
+        ctx.lineTo(x + 12, y + 12);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(x + 12, y - 12);
+        ctx.lineTo(x - 12, y + 12);
+        ctx.stroke();
+        
+        // Draw emerging spinner
+        if (transitionProgress > 0.5) {
+            const spinProgress = (transitionProgress - 0.5) / 0.5; // Rescale to 0-1
+            
+            // Draw emerging arc
+            ctx.strokeStyle = color;
+            ctx.lineWidth = strokeWidth;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            const startAngle = 0;
+            const endAngle = Math.PI * 2 * spinProgress;
+            ctx.arc(x, y, radius, startAngle, endAngle);
+            ctx.stroke();
+        }
+    } else {
+        // Draw static X with subtle pulse
+        ctx.strokeStyle = color;
+        ctx.lineWidth = strokeWidth;
+        ctx.lineCap = 'round';
+        
+        ctx.beginPath();
+        ctx.moveTo(x - 12, y - 12);
+        ctx.lineTo(x + 12, y + 12);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(x + 12, y - 12);
+        ctx.lineTo(x - 12, y + 12);
+        ctx.stroke();
+    }
+}
+
+// Helper functions for Lottie Morphing Loader
+function drawMorphToSuccess(ctx, progress) {
+    const centerX = 80, centerY = 40, radius = 20;
+    const fromColor = '#4285F4'; // Blue
+    const toColor = '#34A853';   // Green
+    const color = interpolateColor(fromColor, toColor, progress);
+
+    // Draw the circle base
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2 * (1 - progress)); // Circle shrinks
+    ctx.stroke();
+
+    // Morph to checkmark
+    if (progress > 0.3) {
+        const checkProgress = (progress - 0.3) / 0.7;
+        ctx.lineCap = 'round';
+
+        // First part of check
+        const startX = centerX - 10;
+        const startY = centerY + 5;
+        const midX = centerX - 2;
+        const midY = centerY + 13;
+        const p1x = startX + (midX - startX) * checkProgress;
+        const p1y = startY + (midY - startY) * checkProgress;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(p1x, p1y);
+        ctx.stroke();
+
+        // Second part of check
+        if (checkProgress > 0.5) {
+            const check2Progress = (checkProgress - 0.5) / 0.5;
+            const endX = centerX + 15;
+            const endY = centerY - 10;
+            const p2x = midX + (endX - midX) * check2Progress;
+            const p2y = midY + (endY - midY) * check2Progress;
+            ctx.beginPath();
+            ctx.moveTo(midX, midY);
+            ctx.lineTo(p2x, p2y);
+            ctx.stroke();
+        }
+        ctx.lineCap = 'butt';
+    }
+}
+
+function drawMorphToFail(ctx, progress) {
+    const centerX = 80, centerY = 40, radius = 20;
+    const fromColor = '#34A853'; // Green
+    const toColor = '#EA4335';   // Red
+    const color = interpolateColor(fromColor, toColor, progress);
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+
+    // Reverse morph checkmark to lines
+    const checkProgress = 1 - progress;
+    const startX1 = centerX - 10, startY1 = centerY + 5;
+    const midX = centerX - 2, midY = centerY + 13;
+    const endX = centerX + 15, endY = centerY - 10;
+    
+    // First line of check (disappears)
+    ctx.globalAlpha = checkProgress;
+    ctx.beginPath();
+    ctx.moveTo(startX1, startY1);
+    ctx.lineTo(midX, midY);
+    ctx.stroke();
+
+    // Second line of check (disappears)
+    ctx.beginPath();
+    ctx.moveTo(midX, midY);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Morph lines to X
+    const p1_start = { x: startX1, y: startY1 };
+    const p1_end = { x: midX, y: midY };
+    const p2_start = { x: midX, y: midY };
+    const p2_end = { x: endX, y: endY };
+    
+    const x1_target_start = { x: centerX - 12, y: centerY - 12 };
+    const x1_target_end = { x: centerX + 12, y: centerY + 12 };
+    const x2_target_start = { x: centerX + 12, y: centerY - 12 };
+    const x2_target_end = { x: centerX - 12, y: centerY + 12 };
+
+    const lerp = (a, b, t) => a + (b - a) * t;
+
+    // First diagonal of X
+    const x1_start = { x: lerp(p1_start.x, x1_target_start.x, progress), y: lerp(p1_start.y, x1_target_start.y, progress) };
+    const x1_end = { x: lerp(p1_end.x, x1_target_end.x, progress), y: lerp(p1_end.y, x1_target_end.y, progress) };
+    ctx.beginPath();
+    ctx.moveTo(x1_start.x, x1_start.y);
+    ctx.lineTo(x1_end.x, x1_end.y);
+    ctx.stroke();
+    
+    // Second diagonal of X
+    const x2_start = { x: lerp(p2_start.x, x2_target_start.x, progress), y: lerp(p2_start.y, x2_target_start.y, progress) };
+    const x2_end = { x: lerp(p2_end.x, x2_target_end.x, progress), y: lerp(p2_end.y, x2_target_end.y, progress) };
+    ctx.beginPath();
+    ctx.moveTo(x2_start.x, x2_start.y);
+    ctx.lineTo(x2_end.x, x2_end.y);
+    ctx.stroke();
+
+    ctx.lineCap = 'butt';
+}
