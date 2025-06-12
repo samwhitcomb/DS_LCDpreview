@@ -599,7 +599,7 @@ const flows = {
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
-                const shouldContinue = drawSuccessAnimation(ctx, frame);
+                const shouldContinue = drawSuccessAnimationlink(ctx, frame);
                 if (!shouldContinue) {
                     // Move to Post Binding state
                     currentStateIndex = 3; // Move to Post Binding state
@@ -3892,7 +3892,66 @@ function drawSuccessAnimation(ctx, frame) {
     
     return frame < totalDuration; // Return true if animation should continue
 }
-
+function drawSuccessAnimationlink(ctx, frame) {
+    // Animation phases
+    const fullHeightDuration = 60;  // 1 second full height
+    const minimizeDuration = 30;    // 0.5 seconds minimize
+    const textDuration = 180;       // 3 seconds with text
+    const totalDuration = fullHeightDuration + minimizeDuration + textDuration;
+    
+    // Calculate progress for each phase
+    const fullHeightProgress = Math.min(1, frame / fullHeightDuration);
+    const minimizeProgress = Math.max(0, Math.min(1, (frame - fullHeightDuration) / minimizeDuration));
+    const textProgress = Math.max(0, Math.min(1, (frame - fullHeightDuration - minimizeDuration) / 30));
+    
+    // Calculate sizes and positions
+    const strokeWidth = 3;
+    const fullSize = 38;  // (80 - strokeWidth*2)/2 to account for stroke width
+    const smallSize = 15; // Increased minimized size
+    const currentSize = frame < fullHeightDuration ? fullSize : 
+                       fullSize - (fullSize - smallSize) * minimizeProgress;
+    
+    // Calculate positions - centered in the screen
+    const centerX = 80;  // Center of screen (160/2)
+    const centerY = 40;  // Center of screen (80/2)
+    
+    // Calculate final position offset
+    const finalX = centerX + 0; // Move right by 50 pixels when minimized
+    const finalY = centerY - 10; // Move up by 10 pixels when minimized
+    
+    // Calculate current position based on animation progress
+    const currentX = frame < fullHeightDuration ? centerX : 
+                    centerX + ((finalX - centerX) * minimizeProgress);
+    const currentY = frame < fullHeightDuration ? centerY : 
+                    centerY + ((finalY - centerY) * minimizeProgress);
+    
+    // Draw animated circle
+    ctx.strokeStyle = '#00ff00';
+    ctx.lineWidth = strokeWidth;
+    ctx.beginPath();
+    ctx.arc(currentX, currentY, currentSize, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Draw checkmark (scaled with circle)
+    const checkScale = currentSize / fullSize;
+    const checkOffset = 16 * checkScale; // Adjusted for new size
+    ctx.beginPath();
+    ctx.moveTo(currentX - checkOffset, currentY);
+    ctx.lineTo(currentX - checkOffset/2, currentY + checkOffset/2);
+    ctx.lineTo(currentX + checkOffset, currentY - checkOffset/2);
+    ctx.stroke();
+    
+    // Draw text when minimized
+    if (frame >= fullHeightDuration + minimizeDuration) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${textProgress})`;
+        ctx.font = '20px Barlow';
+        ctx.fontWeight = '400';
+        ctx.textAlign = 'center';
+        ctx.fillText('Linking Complete', centerX, 70); // Keep text centered
+    }
+    
+    return frame < totalDuration; // Return true if animation should continue
+}
 // Add the new reusable battery animation function
 function drawAnimatedBattery(ctx, frame, options = {}) {
     const {
