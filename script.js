@@ -537,7 +537,7 @@ const flows = {
                 const radius = barHeight / 2;
                 
                 // Calculate progress (0 to 1)
-                const progress = Math.min(1, frame / 300); // 5 seconds total
+                const progress = Math.min(1, frame / 100); // 5 seconds total
                 
                 // Draw background bar
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
@@ -582,7 +582,7 @@ const flows = {
                     const currentState = currentStates[currentStateIndex];
                     if (currentState.title === "Linking in Progress") {
                         currentState.draw(ctx, frame++);
-                        if (frame < 300) { // 5 seconds
+                        if (frame < 120) { // 5 seconds
                             requestAnimationFrame(animate);
                         } else {
                             currentStateIndex = 2; // Move to Linking Complete
@@ -865,7 +865,7 @@ const flows = {
                 ctx.font = '15px Barlow';
                 ctx.fontWeight = '300';
                 ctx.textAlign = 'center';
-                ctx.fillText('Firmware 1.43', 80, 25);
+                ctx.fillText('Fw 1.43', 80, 25);
                 
                 // Calculate progress and time
                 const totalDuration = 30; // 30 seconds total
@@ -2121,8 +2121,8 @@ const flows = {
                         const elapsedTime = Date.now() - startTime;
                         
                         // State transitions based on time
-                        if (sequenceStage === 0 && elapsedTime >= 5000) {
-                            // After 5 seconds, transition to Ready.gif
+                        if (sequenceStage === 0 && elapsedTime >= secondsToFrames(4) * (1000/FRAME_RATE)) {
+                            // After 2.5 seconds, transition to Ready.gif
                             img.src = 'Assets/Ready.gif';
                             sequenceStage = 1;
                             // Ensure LED stays white breathing
@@ -2130,8 +2130,8 @@ const flows = {
                             ledLight.className = 'led-light';
                             ledLight.classList.add('on');
                             ledLight.classList.add('green');
-                        } else if (sequenceStage === 1 && elapsedTime >= 5850) {
-                            // After 1 more second (6 seconds total), transition to Ready.png
+                        } else if (sequenceStage === 1 && elapsedTime >= secondsToFrames(5) * (1000/FRAME_RATE)) {
+                            // After 0.425 more seconds (2.925 seconds total), transition to Ready.png
                             img.src = 'Assets/Ready.png';
                             sequenceStage = 2;
                             // Update LED to green
@@ -4543,4 +4543,18 @@ function drawMorphToFail(ctx, progress) {
     ctx.stroke();
 
     ctx.lineCap = 'butt';
+}
+
+// Add these constants at the top of the file
+const FRAME_RATE = 60; // Expected frame rate
+const TIMING_MULTIPLIER = 0.5; // Adjust timing to match actual frame rate
+
+// Helper function to convert seconds to frames
+function secondsToFrames(seconds) {
+    return Math.floor(seconds * FRAME_RATE * TIMING_MULTIPLIER);
+}
+
+// Helper function to convert frames to seconds
+function framesToSeconds(frames) {
+    return frames / (FRAME_RATE * TIMING_MULTIPLIER);
 }
