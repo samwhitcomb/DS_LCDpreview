@@ -375,28 +375,36 @@ const flows = {
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'left';
                 
-                if (isShuttingDown) {
-                    const elapsedTime = (Date.now() - shutdownStartTime) / 1000;
-                    const remainingTime = Math.max(0, 2 - elapsedTime);
-                    
-                    ctx.fillText('Shutting down', 10, 30);
-                    ctx.fillText(Math.ceil(remainingTime), 10, 50);
-                } else {
+                if (!isShuttingDown) {
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '12px monospace';
+                    ctx.textAlign = 'left';
                     ctx.fillText('Press and hold', 10, 30);
                     ctx.fillText('power button', 10, 50);
                     ctx.fillText('to shutdown', 10, 70);
                 }
                 
                 drawBattery(ctx, 85);
-                drawPowerButtonAnimation(ctx, frame);
+                // Only draw the vertical line without the bouncing arrow
+                const x = 140;  // Position from right
+                const y = 40;   // Center vertically
+                const lineHeight = 20;  // Fixed height
+                const lineOpacity = Math.abs(Math.sin(frame * 0.02)) * 0.5 + 0.3;
+                
+                ctx.strokeStyle = `rgba(255, 255, 255, ${lineOpacity})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x + 5, y - lineHeight/2);
+                ctx.lineTo(x + 5, y + lineHeight/2);
+                ctx.stroke();
             },
             led: { state: 'on', color: 'white' },
             onEnter: () => {
                 let frame = 0;
+                let gifContainer = null;
+                let initialDelayTimer = null;
+                
                 const animate = () => {
                     const currentStates = flows[currentFlow];
                     const currentState = currentStates[currentStateIndex];
@@ -405,7 +413,89 @@ const flows = {
                         requestAnimationFrame(animate);
                     }
                 };
+                
+                // Create GIF container when shutdown starts
+                const createGifContainer = () => {
+                    // Always remove existing container first to restart animation
+                    removeGifContainer();
+                    
+                    // Clear any existing timer
+                    if (initialDelayTimer) {
+                        clearTimeout(initialDelayTimer);
+                    }
+                    
+                    // Wait 0.3 seconds before showing the GIF
+                    initialDelayTimer = setTimeout(() => {
+                        // Create new container
+                        gifContainer = document.createElement('div');
+                        gifContainer.style.position = 'absolute';
+                        gifContainer.style.top = canvas.offsetTop + 'px';
+                        gifContainer.style.left = canvas.offsetLeft + 'px';
+                        gifContainer.style.width = canvas.width + 'px';
+                        gifContainer.style.height = canvas.height + 'px';
+                        gifContainer.style.zIndex = '10';
+                        gifContainer.dataset.gifContainer = 'true';
+                        gifContainer.style.opacity = '0'; // Start with 0 opacity
+                        gifContainer.style.transition = 'opacity 0.5s ease-in'; // Add fade transition
+                        canvas.parentNode.appendChild(gifContainer);
+
+                        // Create new image element
+                        const img = document.createElement('img');
+                        img.style.width = '70%'; // Make GIF 30% smaller
+                        img.style.height = '70%';
+                        img.style.objectFit = 'contain';
+                        img.style.position = 'absolute';
+                        img.style.top = '50%';
+                        img.style.left = '50%';
+                        img.style.transform = 'translate(-50%, -50%)'; // Center the smaller GIF
+                        
+                        // Force reload of GIF by adding timestamp
+                        const timestamp = new Date().getTime();
+                        img.src = `Assets/poweroff.gif?t=${timestamp}`;
+                        
+                        gifContainer.appendChild(img);
+                        
+                        // Trigger fade in
+                        requestAnimationFrame(() => {
+                            gifContainer.style.opacity = '1';
+                        });
+                    }, 500); // 0.3 second delay
+                };
+                
+                // Remove GIF container
+                const removeGifContainer = () => {
+                    if (gifContainer) {
+                        gifContainer.remove();
+                        gifContainer = null;
+                    }
+                    if (initialDelayTimer) {
+                        clearTimeout(initialDelayTimer);
+                        initialDelayTimer = null;
+                    }
+                };
+                
+                // Start animation
                 animate();
+                
+                // Add event listeners for shutdown state changes
+                const originalStartShutdown = startShutdownCountdown;
+                startShutdownCountdown = () => {
+                    originalStartShutdown();
+                    createGifContainer(); // This will now always create a fresh container after delay
+                };
+                
+                const originalCancelShutdown = cancelShutdown;
+                cancelShutdown = () => {
+                    originalCancelShutdown();
+                    removeGifContainer();
+                };
+            },
+            onExit: () => {
+                // Remove GIF container when exiting state
+                const gifContainer = document.querySelector('[data-gif-container="true"]');
+                if (gifContainer) {
+                    gifContainer.remove();
+                }
             }
         },
         {
@@ -446,6 +536,100 @@ const flows = {
                     }
                 };
                 animate();
+            }
+        },
+        {
+            title: "Power Button Hold",
+            explanation: "Hold the power button for 2 seconds to power off",
+            draw: (ctx, frame) => {
+                // Clear canvas
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+            },
+            led: { state: 'on', color: 'red' },
+            onEnter: () => {
+                let holdStartTime = null;
+                let holdTimer = null;
+                let frame = 0;
+                
+                // Create a container for the GIF
+                const gifContainer = document.createElement('div');
+                gifContainer.style.position = 'absolute';
+                gifContainer.style.top = canvas.offsetTop + 'px';
+                gifContainer.style.left = canvas.offsetLeft + 'px';
+                gifContainer.style.width = canvas.width + 'px';
+                gifContainer.style.height = canvas.height + 'px';
+                gifContainer.style.zIndex = '10';
+                gifContainer.dataset.gifContainer = 'true';
+                canvas.parentNode.appendChild(gifContainer);
+
+                // Create and load the image
+                const img = document.createElement('img');
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'contain';
+                gifContainer.appendChild(img);
+                img.src = 'Assets/poweroff.gif';
+                
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Power Button Hold") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                
+                const handlePowerButton = (isPressed) => {
+                    if (isPressed) {
+                        powerButtonPressStartTime = Date.now();
+                        isPowerButtonPressed = true;
+                        startShutdownCountdown();
+                        
+                        // Set timeout for 5 seconds
+                        setTimeout(() => {
+                            if (isPowerButtonPressed) {
+                                // If still pressed after 5 seconds, proceed to shutdown complete
+                                currentStateIndex = 1;
+                            }
+                        }, SHUTDOWN_HOLD_TIME);
+                    } else {
+                        isPowerButtonPressed = false;
+                        cancelShutdown();
+                    }
+                };
+                
+                // Start animation
+                animate();
+                
+                // Add event listeners for power button
+                document.addEventListener('powerButtonPress', () => handlePowerButton(true));
+                document.addEventListener('powerButtonRelease', () => handlePowerButton(false));
+            },
+            onExit: () => {
+                // Clean up event listeners
+                document.removeEventListener('powerButtonPress', () => {});
+                document.removeEventListener('powerButtonRelease', () => {});
+                
+                // Remove GIF container
+                const gifContainer = document.querySelector('[data-gif-container="true"]');
+                if (gifContainer) {
+                    gifContainer.remove();
+                }
+            }
+        },
+        {
+            title: "Device Off",
+            explanation: "Device is powered off",
+            draw: (ctx, frame) => {
+                // Clear canvas with black (screen is off)
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+            },
+            led: { state: 'off', color: 'none' },
+            onEnter: () => {
+                // Reset all connection states
+                connectionState = 'searching';
             }
         }
     ],
@@ -2261,1092 +2445,8 @@ const flows = {
                 animate();
             }
         }
-    ]
-
-   /* Archive: [
-        {
-            title: "Juggling Balls",
-            explanation: "Animation with juggling baseball balls similar to Google's loading animation.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Center position
-                const centerX = 80;
-                const centerY = 40;
-                
-                // Draw juggling balls
-                const ballCount = 3;
-                const ballRadius = 8;
-                const ballSpacing = 25;  // Horizontal spacing between balls
-                const bounceHeight = 15; // Vertical bounce height
-                const baseY = centerY + 5; // Base position for balls
-                
-                // Draw each ball
-                for (let i = 0; i < ballCount; i++) {
-                    // Calculate time offset for each ball
-                    const timeOffset = (i / ballCount) * Math.PI * 2;
-                    const ballX = centerX + (i - (ballCount-1)/2) * ballSpacing;
-                    
-                    // Calculate vertical position with bounce effect
-                    const bounceSpeed = 0.05;
-                    const bounceOffset = Math.sin(frame * bounceSpeed + timeOffset) * bounceHeight;
-                    const ballY = baseY - Math.abs(bounceOffset); // Use abs to keep bounce above baseline
-                    
-                    // Draw ball shadow (subtle ellipse)
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                    ctx.beginPath();
-                    ctx.ellipse(ballX, baseY + 10, ballRadius * 0.8, ballRadius * 0.3, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    // Draw baseball
-                    ctx.fillStyle = '#fff';
-                    ctx.beginPath();
-                    ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    // Draw red stitches
-                    ctx.strokeStyle = '#ff0000';
-                    ctx.lineWidth = 1;
-                    
-                    // Rotate based on bounce
-                    ctx.save();
-                    ctx.translate(ballX, ballY);
-                    ctx.rotate(frame * 0.05 + i * 2); // Each ball rotates differently
-                    
-                    // Draw curved stitches
-                    ctx.beginPath();
-                    ctx.arc(0, 0, ballRadius * 0.6, Math.PI/6, Math.PI - Math.PI/6);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.arc(0, 0, ballRadius * 0.6, Math.PI + Math.PI/6, Math.PI * 2 - Math.PI/6);
-                    ctx.stroke();
-                    
-                    ctx.restore();
-                }
-                
-                // Draw battery and WiFi
-                drawBattery(ctx, 85);
-                drawWifiStatus(ctx, 'connected', frame, false);
-            },
-            led: { state: 'breathing', color: 'blue' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Juggling Balls") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Lottie-Style Loader",
-            explanation: "Modern, smooth circular loader similar to Lottie animations that morphs between states.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                const centerX = 80;
-                const centerY = 40;
-                
-                // Define state cycle duration and calculate current state
-                const stateCycleDuration = 400; // Total frames for full cycle
-                const cyclePosition = frame % stateCycleDuration;
-                
-                // Define state transitions
-                const stateTransitions = [
-                    { name: 'loading', duration: 200, color: '#4285F4' }, // Google blue
-                    { name: 'ready', duration: 100, color: '#34A853' },   // Google green
-                    { name: 'not-ready', duration: 100, color: '#EA4335' } // Google red
-                ];
-                
-                // Calculate current state and progress
-                let stateIndex = 0;
-                let frameInState = cyclePosition;
-                let totalDuration = 0;
-                
-                for (let i = 0; i < stateTransitions.length; i++) {
-                    if (frameInState < stateTransitions[i].duration) {
-                        stateIndex = i;
-                        break;
-                    }
-                    frameInState -= stateTransitions[i].duration;
-                    totalDuration += stateTransitions[i].duration;
-                }
-                
-                const currentState = stateTransitions[stateIndex];
-                const nextStateIndex = (stateIndex + 1) % stateTransitions.length;
-                const nextState = stateTransitions[nextStateIndex];
-                
-                // Calculate transition progress (last 30 frames of each state)
-                const transitionDuration = 30;
-                const stateProgress = frameInState / currentState.duration;
-                const isTransitioning = frameInState > (currentState.duration - transitionDuration);
-                const transitionProgress = isTransitioning ? 
-                    (frameInState - (currentState.duration - transitionDuration)) / transitionDuration : 0;
-                
-                // Interpolate colors for transition
-                const color = isTransitioning ? 
-                    interpolateColor(currentState.color, nextState.color, transitionProgress) : 
-                    currentState.color;
-                
-                // Draw based on current state
-                if (currentState.name === 'loading') {
-                    drawLottieLoader(ctx, centerX, centerY, frame, color, isTransitioning, transitionProgress, nextState.name);
-                } else if (currentState.name === 'ready') {
-                    drawLottieReady(ctx, centerX, centerY, color, isTransitioning, transitionProgress);
-                } else if (currentState.name === 'not-ready') {
-                    drawLottieNotReady(ctx, centerX, centerY, color, isTransitioning, transitionProgress);
-                }
-                
-                // Draw battery and WiFi
-                drawBattery(ctx, 85);
-                drawWifiStatus(ctx, 'connected', frame, false);
-            },
-            led: { state: 'breathing', color: 'blue' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Lottie-Style Loader") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Scanning Wipe",
-            explanation: "A full-screen scanning wipe effect that suggests system processing or calibration.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-
-                // --- Background Grid ---
-                const gridSize = 10;
-                ctx.strokeStyle = 'rgba(0, 136, 255, 0.1)'; // Faint blue grid
-                ctx.lineWidth = 0.5;
-                for (let x = 0; x < 160; x += gridSize) {
-                    ctx.beginPath();
-                    ctx.moveTo(x, 0);
-                    ctx.lineTo(x, 80);
-                    ctx.stroke();
-                }
-                for (let y = 0; y < 80; y += gridSize) {
-                    ctx.beginPath();
-                    ctx.moveTo(0, y);
-                    ctx.lineTo(160, y);
-                    ctx.stroke();
-                }
-
-                // --- Scanning Wipe ---
-                const wipeDuration = 120; // 2 seconds for one sweep
-                const cyclePosition = (frame % wipeDuration) / wipeDuration; // 0 to 1
-                const wipeX = cyclePosition * 160;
-
-                // --- Gradient for the wipe ---
-                const gradient = ctx.createLinearGradient(wipeX - 20, 0, wipeX + 20, 0);
-                gradient.addColorStop(0, 'rgba(0, 136, 255, 0)');
-                gradient.addColorStop(0.5, 'rgba(0, 200, 255, 0.7)');
-                gradient.addColorStop(1, 'rgba(0, 136, 255, 0)');
-
-                ctx.fillStyle = gradient;
-                ctx.fillRect(wipeX - 20, 0, 40, 80);
-
-                // --- Bright leading edge ---
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(wipeX, 0, 1.5, 80);
-
-                // --- Horizontal Scan Lines ---
-                const lineCount = 40;
-                for (let i = 0; i < lineCount; i++) {
-                    const y = (i / lineCount) * 80;
-                    const opacity = Math.sin(frame * 0.1 + i * 0.5) * 0.1 + 0.1;
-                    ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-                    ctx.fillRect(0, y, 160, 1);
-                }
-
-                // --- Overlay Text (Optional) ---
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                ctx.font = '14px Barlow';
-                ctx.textAlign = 'center';
-                ctx.fillText('ANALYZING...', 80, 45);
-
-
-                // Draw battery and WiFi
-                drawBattery(ctx, 85);
-                drawWifiStatus(ctx, 'connected', frame, false);
-            },
-            led: { state: 'breathing', color: 'blue' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Scanning Wipe") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "State Transitions",
-            explanation: "Seamless morphing transitions between loading, ready, and not ready states.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Define state cycle duration and calculate current state
-                const stateDuration = 180; // 3 seconds per state at 60fps
-                const totalCycleDuration = stateDuration * 3; // 3 states total
-                const cyclePosition = frame % totalCycleDuration;
-                
-                // Determine current state and transition progress
-                let currentState, nextState, transitionProgress;
-                const transitionDuration = 60; // 1 second transition
-                
-                if (cyclePosition < stateDuration) {
-                    // Loading state (blue)
-                    currentState = 'loading';
-                    nextState = 'ready';
-                    transitionProgress = Math.max(0, (cyclePosition - (stateDuration - transitionDuration)) / transitionDuration);
-                } else if (cyclePosition < stateDuration * 2) {
-                    // Ready state (green)
-                    currentState = 'ready';
-                    nextState = 'not-ready';
-                    transitionProgress = Math.max(0, (cyclePosition - (stateDuration * 2 - transitionDuration)) / transitionDuration);
-                } else {
-                    // Not ready state (red)
-                    currentState = 'not-ready';
-                    nextState = 'loading';
-                    transitionProgress = Math.max(0, (cyclePosition - (stateDuration * 3 - transitionDuration)) / transitionDuration);
-                }
-                
-                // Get base colors for current and next states
-                const stateColors = {
-                    'loading': '#0088ff',   // Blue
-                    'ready': '#00ff00',     // Green
-                    'not-ready': '#ff0000'  // Red
-                };
-                
-                const currentColor = stateColors[currentState];
-                const nextColor = stateColors[nextState];
-                
-                // Draw state indicator
-                const centerX = 80;
-                const centerY = 40;
-                const circleRadius = 25;
-                
-                // Draw state label
-                ctx.fillStyle = '#fff';
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'center';
-                
-                // Show state name with fade effect during transition
-                if (transitionProgress > 0) {
-                    // Current state name fades out
-                    ctx.globalAlpha = 1 - transitionProgress;
-                    ctx.fillText(currentState.toUpperCase(), centerX, 15);
-                    
-                    // Next state name fades in
-                    ctx.globalAlpha = transitionProgress;
-                    ctx.fillText(nextState.toUpperCase(), centerX, 15);
-                } else {
-                    // Just show current state
-                    ctx.fillText(currentState.toUpperCase(), centerX, 15);
-                }
-                ctx.globalAlpha = 1;
-                
-                // Draw main visual based on state
-                if (currentState === 'loading' && transitionProgress === 0) {
-                    // Pure loading state - draw data visualization spinner
-                    drawLoadingSpinner(ctx, centerX, centerY, circleRadius, frame, currentColor);
-                } else if (currentState === 'ready' && transitionProgress === 0) {
-                    // Pure ready state - draw checkmark
-                    drawCheckmark(ctx, centerX, centerY, circleRadius, currentColor);
-                } else if (currentState === 'not-ready' && transitionProgress === 0) {
-                    // Pure not-ready state - draw X mark
-                    drawXmark(ctx, centerX, centerY, circleRadius, currentColor);
-                } else {
-                    // Transition between states
-                    if (currentState === 'loading' && nextState === 'ready') {
-                        // Morph from spinner to checkmark
-                        morphSpinnerToCheckmark(ctx, centerX, centerY, circleRadius, frame, transitionProgress, currentColor, nextColor);
-                    } else if (currentState === 'ready' && nextState === 'not-ready') {
-                        // Morph from checkmark to X
-                        morphCheckmarkToX(ctx, centerX, centerY, circleRadius, transitionProgress, currentColor, nextColor);
-                    } else if (currentState === 'not-ready' && nextState === 'loading') {
-                        // Morph from X to spinner
-                        morphXToSpinner(ctx, centerX, centerY, circleRadius, frame, transitionProgress, currentColor, nextColor);
-                    }
-                }
-                
-                // Draw state progress indicator
-                const progressWidth = 120;
-                const progressHeight = 4;
-                const progressX = (160 - progressWidth) / 2;
-                const progressY = 70;
-                
-                // Draw background bar
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-                ctx.fillRect(progressX, progressY, progressWidth, progressHeight);
-                
-                // Calculate progress within current state (excluding transition)
-                let stateProgress;
-                if (cyclePosition < stateDuration) {
-                    stateProgress = cyclePosition / stateDuration;
-                } else if (cyclePosition < stateDuration * 2) {
-                    stateProgress = (cyclePosition - stateDuration) / stateDuration;
-                } else {
-                    stateProgress = (cyclePosition - stateDuration * 2) / stateDuration;
-                }
-                
-                // Draw progress fill
-                ctx.fillStyle = currentColor;
-                ctx.fillRect(progressX, progressY, progressWidth * stateProgress, progressHeight);
-                
-                // Draw battery and WiFi
-                drawBattery(ctx, 85);
-                drawWifiStatus(ctx, 'connected', frame, false);
-            },
-            led: { state: 'breathing', color: 'blue' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "State Transitions") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Vertical Equalizer",
-            explanation: "Classic stereo equalizer with vertical bars that bounce to an invisible beat.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Parameters for equalizer
-                const barCount = 16;       // Number of bars
-                const barWidth = 7;       // Width of each bar
-                const barSpacing = 3;     // Space between bars
-                const maxBarHeight = 60;  // Maximum height of bars
-                const baseY = 75;         // Base position (bottom of bars)
-                
-                // Generate pseudo-random heights with smooth transitions
-                for (let i = 0; i < barCount; i++) {
-                    // Create semi-random pattern with different frequencies
-                    const timeOffset = i * 0.2;
-                    const freq1 = 0.03 + (i % 3) * 0.01;
-                    const freq2 = 0.06 - (i % 5) * 0.005;
-                    const freq3 = 0.02 + (i % 7) * 0.008;
-                    
-                    // Combine different sine waves for organic movement
-                    const heightPercent = 
-                        0.2 + // Base height so bars never disappear
-                        0.3 * Math.sin(frame * freq1 + timeOffset) + 
-                        0.3 * Math.sin(frame * freq2 + timeOffset * 2.5) +
-                        0.2 * Math.sin(frame * freq3 + timeOffset * 0.7);
-                    
-                    // Calculate bar height and position
-                    const barHeight = Math.abs(heightPercent) * maxBarHeight;
-                    const barX = 10 + i * (barWidth + barSpacing);
-                    
-                    // Create gradient for each bar
-                    const gradient = ctx.createLinearGradient(barX, baseY, barX, baseY - barHeight);
-                    gradient.addColorStop(0, '#00ff00');    // Green at bottom
-                    gradient.addColorStop(0.6, '#ffff00');  // Yellow in middle
-                    gradient.addColorStop(1, '#ff0000');    // Red at top
-                    
-                    // Draw bar
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(barX, baseY - barHeight, barWidth, barHeight);
-                    
-                    // Add shine effect
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                    ctx.fillRect(barX, baseY - barHeight, barWidth / 3, barHeight);
-                }
-                
-                // Draw battery and WiFi
-                drawBattery(ctx, 85);
-                drawWifiStatus(ctx, 'connected', frame, false);
-            },
-            led: { state: 'breathing', color: 'blue' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Vertical Equalizer") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Circular Equalizer",
-            explanation: "Radial equalizer with bars emanating from the center.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Define center and parameters
-                const centerX = 80;
-                const centerY = 40;
-                const barCount = 32;     // Number of bars around the circle
-                const minRadius = 5;     // Inner radius
-                const maxRadius = 30;    // Maximum bar length
-                const barWidth = 3;      // Width of each bar in degrees
-                
-                // Draw each bar in the circular equalizer
-                for (let i = 0; i < barCount; i++) {
-                    // Calculate angle for this bar
-                    const angle = (i / barCount) * Math.PI * 2;
-                    
-                    // Create semi-random heights with multiple frequencies
-                    const timeOffset = i * 0.2;
-                    const freq1 = 0.03 + (i % 3) * 0.01;
-                    const freq2 = 0.05 - (i % 4) * 0.008;
-                    
-                    // Generate bar length with smooth transition
-                    const barPercent = 
-                        0.4 + // Base length
-                        0.6 * Math.abs(Math.sin(frame * freq1 + timeOffset) * 
-                               Math.cos(frame * freq2 + timeOffset * 1.5));
-                    
-                    const barLength = minRadius + barPercent * maxRadius;
-                    
-                    // Calculate start and end points
-                    const innerX = centerX + Math.cos(angle) * minRadius;
-                    const innerY = centerY + Math.sin(angle) * minRadius;
-                    const outerX = centerX + Math.cos(angle) * barLength;
-                    const outerY = centerY + Math.sin(angle) * barLength;
-                    
-                    // Draw bar
-                    ctx.beginPath();
-                    ctx.lineWidth = barWidth;
-                    
-                    // Create gradient based on length
-                    const gradient = ctx.createLinearGradient(innerX, innerY, outerX, outerY);
-                    gradient.addColorStop(0, '#0088ff');
-                    gradient.addColorStop(1, '#00ffff');
-                    
-                    ctx.strokeStyle = gradient;
-                    ctx.moveTo(innerX, innerY);
-                    ctx.lineTo(outerX, outerY);
-                    ctx.stroke();
-                }
-                
-                // Draw small baseball in center
-                const ballRadius = 4;
-                ctx.fillStyle = '#fff';
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, ballRadius, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Draw simplified red stitches
-                ctx.strokeStyle = '#ff0000';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, ballRadius * 0.6, 0, Math.PI);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, ballRadius * 0.6, Math.PI, Math.PI * 2);
-                ctx.stroke();
-                
-                // Draw battery and WiFi
-                drawBattery(ctx, 85);
-                drawWifiStatus(ctx, 'connected', frame, false);
-            },
-            led: { state: 'breathing', color: 'blue' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Circular Equalizer") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Waveform Visualizer",
-            explanation: "Dynamic audio waveform visualization that morphs and pulses.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Waveform parameters
-                const width = 160;
-                const height = 80;
-                const centerY = height / 2;
-                const points = 160;  // One point per pixel width
-                const maxAmplitude = 25;  // Maximum height of wave
-                
-                // Draw waveform
-                ctx.beginPath();
-                ctx.lineWidth = 2;
-                
-                // Create gradient for the wave
-                const gradient = ctx.createLinearGradient(0, centerY - maxAmplitude, 0, centerY + maxAmplitude);
-                gradient.addColorStop(0, '#ff0088');
-                gradient.addColorStop(0.5, '#0088ff');
-                gradient.addColorStop(1, '#ff0088');
-                ctx.strokeStyle = gradient;
-                
-                // Calculate each point of the waveform
-                for (let i = 0; i < points; i++) {
-                    const x = i;
-                    
-                    // Combine multiple frequencies for a complex wave
-                    const freq1 = 0.02; // Base frequency
-                    const freq2 = 0.06; // Higher frequency
-                    const freq3 = 0.001; // Very low frequency for slow modulation
-                    
-                    // Calculate y-coordinate with multiple waves
-                    const amplitude = 
-                        Math.sin(frame * freq3) * 0.3 + 0.7; // Overall amplitude modulation
-                    
-                    const y = centerY + 
-                        amplitude * maxAmplitude * Math.sin(frame * freq1 + i * 0.05) * 
-                        Math.cos(frame * freq2 + i * 0.03);
-                    
-                    if (i === 0) {
-                        ctx.moveTo(x, y);
-                    } else {
-                        ctx.lineTo(x, y);
-                    }
-                }
-                ctx.stroke();
-                
-                // Add highlight/glow effect
-                ctx.globalAlpha = 0.5;
-                ctx.lineWidth = 4;
-                ctx.stroke();
-                ctx.globalAlpha = 0.2;
-                ctx.lineWidth = 6;
-                ctx.stroke();
-                ctx.globalAlpha = 1;
-                
-                // Draw a reflection
-                ctx.globalAlpha = 0.2;
-                ctx.scale(1, -0.2); // Flatten the reflection
-                ctx.translate(0, -height * 3.5); // Move the reflection below
-                ctx.stroke(); // Redraw the path for reflection
-                ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
-                ctx.globalAlpha = 1;
-                
-                // Draw battery and WiFi
-                drawBattery(ctx, 85);
-                drawWifiStatus(ctx, 'connected', frame, false);
-            },
-            led: { state: 'breathing', color: 'blue' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Waveform Visualizer") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Dynamic Histogram",
-            explanation: "Baseball-themed dynamic histogram showing data processing.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Draw axes
-                const marginLeft = 15;
-                const marginBottom = 15;
-                const graphWidth = 135;
-                const graphHeight = 55;
-                const originX = marginLeft;
-                const originY = 80 - marginBottom;
-                
-                // Draw axes with slightly brighter color
-                ctx.strokeStyle = '#444';
-                ctx.lineWidth = 1;
-                
-                // X-axis
-                ctx.beginPath();
-                ctx.moveTo(originX, originY);
-                ctx.lineTo(originX + graphWidth, originY);
-                ctx.stroke();
-                
-                // Y-axis
-                ctx.beginPath();
-                ctx.moveTo(originX, originY);
-                ctx.lineTo(originX, originY - graphHeight);
-                ctx.stroke();
-                
-                // Draw histogram bars
-                const barCount = 12;
-                const barWidth = graphWidth / barCount * 0.7;
-                const barSpacing = graphWidth / barCount * 0.3;
-                
-                for (let i = 0; i < barCount; i++) {
-                    // Calculate semi-random heights that change over time
-                    const baseFreq = 0.02;
-                    const freq1 = baseFreq + (i % 3) * 0.005;
-                    const freq2 = baseFreq - (i % 5) * 0.002;
-                    const timeOffset = i * 0.5;
-                    
-                    // Create a distribution-like curve with central tendency
-                    const distanceFactor = 1 - Math.abs((i - barCount/2) / (barCount/2));
-                    const heightBase = 0.3 + distanceFactor * 0.7; // Base height follows a curve
-                    
-                    // Add time-based variation
-                    const variation = 
-                        0.3 * Math.sin(frame * freq1 + timeOffset) * 
-                        Math.cos(frame * freq2 + timeOffset * 1.2);
-                    
-                    // Calculate final height percentage (0-1)
-                    const heightPercent = Math.max(0.1, Math.min(1, heightBase + variation));
-                    
-                    // Calculate bar dimensions
-                    const barHeight = heightPercent * graphHeight;
-                    const barX = originX + i * (barWidth + barSpacing);
-                    const barY = originY - barHeight;
-                    
-                    // Create gradient based on height
-                    const gradient = ctx.createLinearGradient(barX, barY, barX, originY);
-                    
-                    // Use baseball colors (white with red accent)
-                    gradient.addColorStop(0, i === Math.floor(barCount/2) ? '#ff6666' : '#cccccc');
-                    gradient.addColorStop(1, i === Math.floor(barCount/2) ? '#ff0000' : '#ffffff');
-                    
-                    // Draw bar
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(barX, barY, barWidth, barHeight);
-                    
-                    // Add highlight effect
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                    ctx.fillRect(barX, barY, barWidth * 0.3, barHeight);
-                    
-                    // Add top line accent
-                    ctx.strokeStyle = i === Math.floor(barCount/2) ? '#ff0000' : '#ffffff';
-                    ctx.lineWidth = 1;
-                    ctx.beginPath();
-                    ctx.moveTo(barX, barY);
-                    ctx.lineTo(barX + barWidth, barY);
-                    ctx.stroke();
-                }
-                
-                // Draw a small baseball icon near origin
-                const ballX = originX - 7;
-                const ballY = originY + 7;
-                const ballRadius = 5;
-                
-                // Draw ball
-                ctx.fillStyle = '#fff';
-                ctx.beginPath();
-                ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Draw simplified stitches
-                ctx.strokeStyle = '#ff0000';
-                ctx.lineWidth = 0.8;
-                ctx.beginPath();
-                ctx.arc(ballX, ballY, ballRadius * 0.6, 0, Math.PI);
-                ctx.stroke();
-                
-                // Draw battery and WiFi
-                drawBattery(ctx, 85);
-                drawWifiStatus(ctx, 'connected', frame, false);
-            },
-            led: { state: 'breathing', color: 'blue' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Dynamic Histogram") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Data Visualization",
-            explanation: "Complex data processing visualization with radar and network.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Center point
-                const centerX = 80;
-                const centerY = 40;
-                
-                // Draw processing animation - data analysis visualization
-                
-                // 1. Draw radar-like scanning effect
-                const scanAngle = (frame * 0.1) % (Math.PI * 2);
-                const scanRadius = 25;
-                
-                ctx.strokeStyle = '#0088ff';
-                ctx.lineWidth = 2;
-                
-                // Draw radar scan line
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.lineTo(
-                    centerX + Math.cos(scanAngle) * scanRadius,
-                    centerY + Math.sin(scanAngle) * scanRadius
-                );
-                ctx.stroke();
-                
-                // Draw fading trail
-                for (let i = 1; i <= 8; i++) {
-                    const trailAngle = scanAngle - (i * 0.2);
-                    const opacity = 1 - (i / 8);
-                    
-                    ctx.strokeStyle = `rgba(0, 136, 255, ${opacity * 0.7})`;
-                    ctx.beginPath();
-                    ctx.moveTo(centerX, centerY);
-                    ctx.lineTo(
-                        centerX + Math.cos(trailAngle) * scanRadius,
-                        centerY + Math.sin(trailAngle) * scanRadius
-                    );
-                    ctx.stroke();
-                }
-                
-                // 2. Draw concentric processing circles
-                const maxCircles = 3;
-                for (let i = 0; i < maxCircles; i++) {
-                    // Calculate size and opacity based on time offset
-                    const circleProgress = (frame * 0.03 + i * (1/maxCircles)) % 1;
-                    const radius = circleProgress * 25; // Max radius of 25px
-                    const opacity = 1 - circleProgress; // Fade out as it expands
-                    
-                    ctx.strokeStyle = `rgba(0, 136, 255, ${opacity * 0.7})`;
-                    ctx.lineWidth = 1;
-                    ctx.beginPath();
-                    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                    ctx.stroke();
-                }
-                
-                // 3. Draw data points and connections
-                const dataPoints = 6;
-                const dataRadius = 18;
-                
-                for (let i = 0; i < dataPoints; i++) {
-                    const angle = (i / dataPoints) * Math.PI * 2;
-                    const x = centerX + Math.cos(angle) * dataRadius;
-                    const y = centerY + Math.sin(angle) * dataRadius;
-                    
-                    // Draw connection to next point
-                    const nextI = (i + 1) % dataPoints;
-                    const nextAngle = (nextI / dataPoints) * Math.PI * 2;
-                    const nextX = centerX + Math.cos(nextAngle) * dataRadius;
-                    const nextY = centerY + Math.sin(nextAngle) * dataRadius;
-                    
-                    // Determine if this connection should be highlighted
-                    const highlightIndex = Math.floor(frame * 0.1) % dataPoints;
-                    const isHighlighted = (i === highlightIndex);
-                    
-                    ctx.strokeStyle = isHighlighted ? '#00ffff' : 'rgba(0, 136, 255, 0.5)';
-                    ctx.lineWidth = isHighlighted ? 2 : 1;
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(x, y);
-                    ctx.lineTo(nextX, nextY);
-                    ctx.stroke();
-                    
-                    // Draw data point
-                    ctx.fillStyle = isHighlighted ? '#00ffff' : '#0088ff';
-                    ctx.beginPath();
-                    ctx.arc(x, y, isHighlighted ? 3 : 2, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                
-                // Draw central node
-                ctx.fillStyle = '#0088ff';
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Draw battery and WiFi
-                drawBattery(ctx, 85);
-                drawWifiStatus(ctx, 'connected', frame, false);
-            },
-            led: { state: 'breathing', color: 'blue' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Data Visualization") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Juggling Balls",
-            explanation: "Animation with juggling baseball balls similar to Google's loading animation.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Center position
-                const centerX = 80;
-                const centerY = 40;
-                
-                // Draw juggling balls
-                const ballCount = 3;
-                const ballRadius = 8;
-                const ballSpacing = 25;  // Horizontal spacing between balls
-                const bounceHeight = 15; // Vertical bounce height
-                const baseY = centerY + 5; // Base position for balls
-                
-                // Draw each ball
-                for (let i = 0; i < ballCount; i++) {
-                    // Calculate time offset for each ball
-                    const timeOffset = (i / ballCount) * Math.PI * 2;
-                    const ballX = centerX + (i - (ballCount-1)/2) * ballSpacing;
-                    
-                    // Calculate vertical position with bounce effect
-                    const bounceSpeed = 0.05;
-                    const bounceOffset = Math.sin(frame * bounceSpeed + timeOffset) * bounceHeight;
-                    const ballY = baseY - Math.abs(bounceOffset); // Use abs to keep bounce above baseline
-                    
-                    // Draw ball shadow (subtle ellipse)
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                    ctx.beginPath();
-                    ctx.ellipse(ballX, baseY + 10, ballRadius * 0.8, ballRadius * 0.3, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    // Draw baseball
-                    ctx.fillStyle = '#fff';
-                    ctx.beginPath();
-                    ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    // Draw red stitches
-                    ctx.strokeStyle = '#ff0000';
-                    ctx.lineWidth = 1;
-                    
-                    // Rotate based on bounce
-                    ctx.save();
-                    ctx.translate(ballX, ballY);
-                    ctx.rotate(frame * 0.05 + i * 2); // Each ball rotates differently
-                    
-                    // Draw curved stitches
-                    ctx.beginPath();
-                    ctx.arc(0, 0, ballRadius * 0.6, Math.PI/6, Math.PI - Math.PI/6);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.arc(0, 0, ballRadius * 0.6, Math.PI + Math.PI/6, Math.PI * 2 - Math.PI/6);
-                    ctx.stroke();
-                    
-                    ctx.restore();
-                }
-                
-                // Draw battery and WiFi
-                drawBattery(ctx, 85);
-                drawWifiStatus(ctx, 'connected', frame, false);
-            },
-            led: { state: 'breathing', color: 'blue' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Juggling Balls") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Lottie Morphing Loader",
-            explanation: "A Lottie-style animation that morphs into success and fail states.",
-            draw: (ctx, frame) => {
-                // This is intentionally left blank, as the animation is handled
-                // by the Lottie library in a separate DOM element created in onEnter.
-            },
-            led: { state: 'breathing', color: 'blue' },
-            onEnter: () => {
-                // Create a container for the Lottie animation
-                const lottieContainer = document.createElement('div');
-                lottieContainer.style.position = 'absolute';
-                lottieContainer.style.top = canvas.offsetTop + 'px';
-                lottieContainer.style.left = canvas.offsetLeft + 'px';
-                lottieContainer.style.width = canvas.width + 'px';
-                lottieContainer.style.height = canvas.height + 'px';
-                lottieContainer.style.zIndex = '10';
-                lottieContainer.style.transition = 'opacity 0.5s ease-in-out';
-                canvas.parentNode.appendChild(lottieContainer);
-
-                // Load the Lottie animation
-                const anim = lottie.loadAnimation({
-                    container: lottieContainer,
-                    renderer: 'svg',
-                    loop: true,
-                    autoplay: true,
-                    path: 'Lotties/Loading.json'
-                });
-
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-
-                    if (currentState.title === "Lottie Morphing Loader") {
-                        frame++;
-                        const stateDuration = 180; // 3s per state
-                        const morphDuration = 60; // 1s morph
-                        const cycle = (stateDuration + morphDuration) * 3;
-                        const pos = frame % cycle;
-
-                        ctx.clearRect(0, 0, 160, 80);
-
-                        if (pos < stateDuration) {
-                            // State 1: Loading (Lottie is visible)
-                            lottieContainer.style.opacity = '1';
-                        } else if (pos < stateDuration + morphDuration) {
-                            // Morph to Success
-                            const progress = (pos - stateDuration) / morphDuration;
-                            lottieContainer.style.opacity = 1 - progress;
-                            drawMorphToSuccess(ctx, progress);
-                        } else if (pos < stateDuration * 2 + morphDuration) {
-                            // State 2: Success
-                            lottieContainer.style.opacity = '0';
-                            drawMorphToSuccess(ctx, 1); // Draw final success state
-                        } else if (pos < stateDuration * 2 + morphDuration * 2) {
-                            // Morph to Fail
-                            const progress = (pos - (stateDuration * 2 + morphDuration)) / morphDuration;
-                            drawMorphToFail(ctx, progress);
-                        } else if (pos < stateDuration * 3 + morphDuration * 2) {
-                            // State 3: Fail
-                            lottieContainer.style.opacity = '0';
-                            drawMorphToFail(ctx, 1); // Draw final fail state
-                        } else {
-                            // Morph back to Loading
-                            const progress = (pos - (stateDuration * 3 + morphDuration * 2)) / morphDuration;
-                            lottieContainer.style.opacity = progress;
-                            drawMorphToFail(ctx, 1 - progress); // Reverse morph to fail (back to circle)
-                        }
-
-                        requestAnimationFrame(animate);
-                    } else {
-                        // Cleanup when the user switches away from this animation
-                        anim.destroy();
-                        if (lottieContainer.parentNode) {
-                            lottieContainer.parentNode.removeChild(lottieContainer);
-                        }
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Scanning Wipe",
-            explanation: "A full-screen scanning wipe effect that suggests system processing or calibration.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-
-                // --- Background Grid ---
-                const gridSize = 10;
-                ctx.strokeStyle = 'rgba(0, 136, 255, 0.1)'; // Faint blue grid
-                ctx.lineWidth = 0.5;
-                for (let x = 0; x < 160; x += gridSize) {
-                    ctx.beginPath();
-                    ctx.moveTo(x, 0);
-                    ctx.lineTo(x, 80);
-                    ctx.stroke();
-                }
-                for (let y = 0; y < 80; y += gridSize) {
-                    ctx.beginPath();
-                    ctx.moveTo(0, y);
-                    ctx.lineTo(160, y);
-                    ctx.stroke();
-                }
-
-                // --- Scanning Wipe ---
-                const wipeDuration = 120; // 2 seconds for one sweep
-                const cyclePosition = (frame % wipeDuration) / wipeDuration; // 0 to 1
-                const wipeX = cyclePosition * 160;
-
-                // --- Gradient for the wipe ---
-                const gradient = ctx.createLinearGradient(wipeX - 20, 0, wipeX + 20, 0);
-                gradient.addColorStop(0, 'rgba(0, 136, 255, 0)');
-                gradient.addColorStop(0.5, 'rgba(0, 200, 255, 0.7)');
-                gradient.addColorStop(1, 'rgba(0, 136, 255, 0)');
-
-                ctx.fillStyle = gradient;
-                ctx.fillRect(wipeX - 20, 0, 40, 80);
-
-                // --- Bright leading edge ---
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(wipeX, 0, 1.5, 80);
-
-                // --- Horizontal Scan Lines ---
-                const lineCount = 40;
-                for (let i = 0; i < lineCount; i++) {
-                    const y = (i / lineCount) * 80;
-                    const opacity = Math.sin(frame * 0.1 + i * 0.5) * 0.1 + 0.1;
-                    ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-                    ctx.fillRect(0, y, 160, 1);
-                }
-
-                // --- Overlay Text (Optional) ---
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                ctx.font = '14px Barlow';
-                ctx.textAlign = 'center';
-                ctx.fillText('ANALYZING...', 80, 45);
-
-
-                // Draw battery and WiFi
-                drawBattery(ctx, 85);
-                drawWifiStatus(ctx, 'connected', frame, false);
-            },
-            led: { state: 'breathing', color: 'blue' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Scanning Wipe") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        }
-    ],*/
-   
+    ],
+    
 };
 
 // Initialize canvas
@@ -3368,7 +2468,7 @@ const ledLight = document.getElementById('ledLight');
 // Add these variables at the top with other state variables
 let powerButtonPressStartTime = 0;
 let isPowerButtonPressed = false;
-const SHUTDOWN_HOLD_TIME = 2000; // 2 seconds in milliseconds
+const SHUTDOWN_HOLD_TIME = 3300; // 5 seconds in milliseconds
 let showSerialNumber = false;
 let connectionState = 'searching';
 
@@ -3706,7 +2806,7 @@ function startShutdownCountdown() {
     // Start countdown animation
     countdownInterval = setInterval(() => {
         const elapsedTime = (Date.now() - shutdownStartTime) / 1000;
-        const remainingTime = Math.max(0, 2 - elapsedTime);
+        const remainingTime = Math.max(0, (SHUTDOWN_HOLD_TIME / 1000) - elapsedTime);
         
         if (remainingTime <= 0) {
             // Complete shutdown
