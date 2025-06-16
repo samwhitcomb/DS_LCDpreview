@@ -3071,7 +3071,7 @@ const flows = {
                 ctx.fill();
                 ctx.restore();
             },
-            led: { state: 'breathing', color: 'white' }
+            led: { state: 'on', color: 'green' }
         }
     ]
 };
