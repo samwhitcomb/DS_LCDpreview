@@ -29,19 +29,43 @@ function drawBattery(ctx, level) {
     const y = 5;    // Position from top
     const width = 20;
     const height = 10;
+    const radius = 0.5;  // Radius for rounded corners
     
-    // Battery outline
+    // Battery outline with rounded corners
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 1;
-    ctx.strokeRect(x, y, width, height);
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+    ctx.stroke();
     
-    // Battery tip
+    // Battery tip (white rectangle)
+    ctx.fillStyle = '#fff';
     ctx.fillRect(x + width, y + 2, 2, height - 4);
     
-    // Battery level
+    // Battery level with rounded corners
     const fillWidth = (width - 2) * (level / 100);
     ctx.fillStyle = level > 20 ? '#fff' : '#ff0000';
-    ctx.fillRect(x + 1, y + 1, fillWidth, height - 2);
+    ctx.beginPath();
+    ctx.moveTo(x + 1 + radius, y + 1);
+    ctx.lineTo(x + 1 + fillWidth - radius, y + 1);
+    ctx.quadraticCurveTo(x + 1 + fillWidth, y + 1, x + 1 + fillWidth, y + 1 + radius);
+    ctx.lineTo(x + 1 + fillWidth, y + height - 1 - radius);
+    ctx.quadraticCurveTo(x + 1 + fillWidth, y + height - 1, x + 1 + fillWidth - radius, y + height - 1);
+    ctx.lineTo(x + 1 + radius, y + height - 1);
+    ctx.quadraticCurveTo(x + 1, y + height - 1, x + 1, y + height - 1 - radius);
+    ctx.lineTo(x + 1, y + 1 + radius);
+    ctx.quadraticCurveTo(x + 1, y + 1, x + 1 + radius, y + 1);
+    ctx.closePath();
+    ctx.fill();
 }
 
 // Power button animation function
@@ -949,6 +973,65 @@ const flows = {
                 const fadeProgress = frame >= fadeStartFrame ? 
                     Math.min(1, (frame - fadeStartFrame) / fadeDuration) : 0;
                 
+                // Draw tray icon during fadeout
+                if (fadeProgress > 0) {
+                    const trayConfig = {
+                        x: 110,  // Aligned with battery
+                        y: 10,   // Same y as battery
+                        width: 10, // Same height as battery
+                        height: 10,
+                        color: `rgba(255, 255, 255, ${fadeProgress})` // Fade in as lightning fades out
+                    };
+
+                   // Draw empty battery
+                drawBattery(ctx, 0);
+                
+                // Calculate lightning bolt position (centered in battery)
+                const x = 130;  // Same x as battery
+                const y = 5;    // Same y as battery
+                const width = 20;
+                const height = 15;
+                
+                // Calculate pulse effect for lightning bolt
+                const pulseIntensity = 0.4;
+                const pulseSpeed = 0.1;
+                const pulseOffset = Math.sin(frame * pulseSpeed) * pulseIntensity;
+                const boltOpacity = 0.7 + pulseOffset;
+                
+                // Lightning bolt configuration
+                const boltConfig = {
+                    x: x + width/2 - 7,  // Center the bolt (width is 14)
+                    y: y + height/2 - 11, // Center the bolt (height is 22)
+                    width: 14,
+                    height: 22,
+                    thickness: 1,
+                    angle: 0,
+                    color: `rgba(255, 255, 255, 1)`
+                };
+                
+                // Draw lightning bolt
+                ctx.save();
+                ctx.fillStyle = boltConfig.color;
+                ctx.translate(boltConfig.x, boltConfig.y);
+                ctx.rotate(boltConfig.angle * Math.PI / 180);
+                
+                const w = boltConfig.width;
+                const h = boltConfig.height;
+                
+                ctx.beginPath();
+                ctx.moveTo(w * 0.794, 0);
+                ctx.lineTo(w * 0.308, 0);
+                ctx.lineTo(0, h * 0.526);
+                ctx.lineTo(w * 0.481, h * 0.526);
+                ctx.lineTo(w * 0.264, h);
+                ctx.lineTo(w, h * 0.383);
+                ctx.lineTo(w * 0.481, h * 0.383);
+                ctx.lineTo(w * 0.794, 0);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+                }
+                
                 // Draw vertical rectangle (charging indicator) with fade out
                 const indicatorWidth = 4;
                 const indicatorHeight = 45;
@@ -973,13 +1056,13 @@ const flows = {
                 
                 // Calculate lightning bolt position and size based on fade progress
                 const boltConfig = {
-                    x: 65 - (55 * fadeProgress), // Move from center to left
-                    y: 18 - (8 * fadeProgress), // Move up slightly
-                    width: 30 - (16 * fadeProgress), // Reduce size
-                    height: 45 - (23 * fadeProgress), // Reduce size
+                    x: 65, // Keep centered
+                    y: 18, // Keep centered
+                    width: 30, // Keep original size
+                    height: 45, // Keep original size
                     thickness: 1,
                     angle: 0,
-                    color: '#fff' // Keep full opacity
+                    color: `rgba(255, 255, 255, ${1 - fadeProgress})` // Fade out opacity
                 };
                 
                 // Draw lightning bolt
@@ -1112,38 +1195,54 @@ const flows = {
                 ctx.textAlign = 'right';
                 ctx.fillText(`${minutes}:${seconds.toString().padStart(2, '0')}`, 150, 75);
                 
-                // Draw lightning bolt in top left (from step 2/6)
-                const boltConfig = {
-                    x: 10,
-                    y: 10,
-                    width: 14,
-                    height: 22,
-                    thickness: 1,
-                    angle: 0,
-                    color: '#fff'
-                };
+              // Draw empty battery
+              drawBattery(ctx, 0);
                 
-                // Draw lightning bolt
-                ctx.save();
-                ctx.fillStyle = boltConfig.color;
-                ctx.translate(boltConfig.x, boltConfig.y);
-                ctx.rotate(boltConfig.angle * Math.PI / 180);
-                
-                const w = boltConfig.width;
-                const h = boltConfig.height;
-                
-                ctx.beginPath();
-                ctx.moveTo(w * 0.794, 0);
-                ctx.lineTo(w * 0.308, 0);
-                ctx.lineTo(0, h * 0.526);
-                ctx.lineTo(w * 0.481, h * 0.526);
-                ctx.lineTo(w * 0.264, h);
-                ctx.lineTo(w, h * 0.383);
-                ctx.lineTo(w * 0.481, h * 0.383);
-                ctx.lineTo(w * 0.794, 0);
-                ctx.closePath();
-                ctx.fill();
-                ctx.restore();
+              // Calculate lightning bolt position (centered in battery)
+              const x = 130;  // Same x as battery
+              const y = 5;    // Same y as battery
+              const width = 20;
+              const height = 15;
+              
+              // Calculate pulse effect for lightning bolt
+              const pulseIntensity = 0.4;
+              const pulseSpeed = 0.1;
+              const pulseOffset = Math.sin(frame * pulseSpeed) * pulseIntensity;
+              const boltOpacity = 0.7 + pulseOffset;
+              
+              // Lightning bolt configuration
+              const boltConfig = {
+                  x: x + width/2 - 7,  // Center the bolt (width is 14)
+                  y: y + height/2 - 11, // Center the bolt (height is 22)
+                  width: 14,
+                  height: 22,
+                  thickness: 1,
+                  angle: 0,
+                  color: `rgba(255, 255, 255, 1)`
+              };
+              
+              // Draw lightning bolt
+              ctx.save();
+              ctx.fillStyle = boltConfig.color;
+              ctx.translate(boltConfig.x, boltConfig.y);
+              ctx.rotate(boltConfig.angle * Math.PI / 180);
+              
+              const w = boltConfig.width;
+              const h = boltConfig.height;
+              
+              ctx.beginPath();
+              ctx.moveTo(w * 0.794, 0);
+              ctx.lineTo(w * 0.308, 0);
+              ctx.lineTo(0, h * 0.526);
+              ctx.lineTo(w * 0.481, h * 0.526);
+              ctx.lineTo(w * 0.264, h);
+              ctx.lineTo(w, h * 0.383);
+              ctx.lineTo(w * 0.481, h * 0.383);
+              ctx.lineTo(w * 0.794, 0);
+              ctx.closePath();
+              ctx.fill();
+              ctx.restore();
+              
                 
                 // Move to next state when complete
                 if (progress >= 1) {
@@ -2446,7 +2545,535 @@ const flows = {
             }
         }
     ],
+    "Connection Animations": [
+        {
+            title: "WiFi Search GIF",
+            explanation: "Searching for networks with animated GIF",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                let frame = 0;
+                
+               // Create a container for the GIF
+               const gifContainer = document.createElement('div');
+               gifContainer.style.position = 'absolute';
+               gifContainer.style.top = (canvas.offsetTop + 0) + 'px';  // Add 5px padding from top
+               gifContainer.style.left = canvas.offsetLeft + 'px';
+               gifContainer.style.width = canvas.width + 'px';
+               gifContainer.style.height = canvas.height + 'px';
+               gifContainer.style.zIndex = '10';
+               gifContainer.dataset.gifContainer = 'true';
+               canvas.parentNode.appendChild(gifContainer);
+
+               // Create and load the image
+               const img = document.createElement('img');
+               img.style.width = '80%';
+               img.style.height = '80%';
+               img.style.objectFit = 'contain';
+               img.style.position = 'absolute';
+               img.style.top = '38%';
+               img.style.left = '50%';
+               img.style.transform = 'translate(-50%, -50%)';
+               gifContainer.appendChild(img);
+                
+                // Force reload of GIF by adding timestamp
+                const timestamp = new Date().getTime();
+                img.src = `Assets/searching.gif?t=${timestamp}`;
+                
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "WiFi Search GIF") {
+                        currentState.draw(ctx, frame++);
+                        if (frame >= 180) { // After 3 seconds, move to connecting state
+                            currentStateIndex = 1;
+                            updateDisplay();
+                        } else {
+                            requestAnimationFrame(animate);
+                        }
+                    } else {
+                        if (gifContainer.parentNode) {
+                            gifContainer.parentNode.removeChild(gifContainer);
+                        }
+                    }
+                };
+                
+                animate();
+                
+                return {
+                    destroy: () => {
+                        if (gifContainer.parentNode) {
+                            gifContainer.parentNode.removeChild(gifContainer);
+                        }
+                    }
+                };
+            }
+        },
+        {
+            title: "WiFi Search GIF 2/3",
+            explanation: "Searching for networks with animated GIF in 2/3 position",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw network name with animated dots
+                ctx.fillStyle = '#fff';
+                ctx.font = '16px Barlow';
+                ctx.textAlign = 'center';
+                
+                // Draw fixed network name at bottom
+                ctx.fillText('Home_32', 80, 75);
+                
+                // Draw animated dots separately
+                const dots = '.'.repeat(Math.floor((frame % 60) / 20) + 1);
+                const dotsX = 80 + ctx.measureText('Home_32').width/2 + 2; // Position dots after the text
+                ctx.fillText(dots, dotsX, 75);
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                let frame = 0;
+                
+                // Create a container for the GIF
+                const gifContainer = document.createElement('div');
+                gifContainer.style.position = 'absolute';
+                gifContainer.style.top = (canvas.offsetTop + 0) + 'px';  // Add 5px padding from top
+                gifContainer.style.left = canvas.offsetLeft + 'px';
+                gifContainer.style.width = canvas.width + 'px';
+                gifContainer.style.height = canvas.height + 'px';
+                gifContainer.style.zIndex = '10';
+                gifContainer.dataset.gifContainer = 'true';
+                canvas.parentNode.appendChild(gifContainer);
+
+                // Create and load the image
+                const img = document.createElement('img');
+                img.style.width = '80%';
+                img.style.height = '80%';
+                img.style.objectFit = 'contain';
+                img.style.position = 'absolute';
+                img.style.top = '38%';
+                img.style.left = '50%';
+                img.style.transform = 'translate(-50%, -50%)';
+                gifContainer.appendChild(img);
+                
+                // Force reload of GIF by adding timestamp
+                const timestamp = new Date().getTime();
+                img.src = `Assets/searching.gif?t=${timestamp}`;
+                
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "WiFi Search GIF 2/3") {
+                        currentState.draw(ctx, frame++);
+                        if (frame >= 300) { // After 3 seconds, move to connecting state
+                            currentStateIndex = 2;
+                            updateDisplay();
+                        } else {
+                            requestAnimationFrame(animate);
+                        }
+                    } else {
+                        if (gifContainer.parentNode) {
+                            gifContainer.parentNode.removeChild(gifContainer);
+                        }
+                    }
+                };
+                
+                animate();
+                
+                return {
+                    destroy: () => {
+                        if (gifContainer.parentNode) {
+                            gifContainer.parentNode.removeChild(gifContainer);
+                        }
+                    }
+                };
+            }
+        },
+        {
+            title: "Connection Success23",
+            explanation: "successfully connected to the selected network",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+
+                  // Draw network name with animated dots
+                  ctx.fillStyle = '#fff';
+                  ctx.font = '16px Barlow';
+                  ctx.textAlign = 'center';
+                  
+                  // Draw fixed network name at bottom
+                  ctx.fillText('Home_32', 80, 75);
+                  
+                           
+                
+                // Draw success animation
+                const shouldContinue = drawSuccessAnimationConnect(ctx, frame);
+                if (!shouldContinue) {
+                    // Move to next state after animation completes
+                    currentStateIndex = 3;
+                    updateDisplay();
+                }
+            },
+            led: { state: 'on', color: 'green' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Connection Success23") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Successfully connected to Home_32",
+            explanation: "Successfully connected to Home_32",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw battery widget in top right
+                const x = 130;  // Same x as battery
+                const y = 5;    // Same y as battery
+                const width = 20;
+                const height = 15;
+                drawBattery(ctx, 75);  // Show 75% battery level
+                
+                // Draw connection bars to the left of battery
+                const barCount = 3;
+                const barWidth = 3;
+                const barSpacing = 2;
+                const barHeights = [5, 8, 11]; // Heights for each bar
+                const trayX = x - (barCount * (barWidth + barSpacing)) - 5; // Position bars to the left of battery
+                const trayY = y + 0;  // Moved 1px higher (was y + 2)
+                
+                // Draw each bar
+                for (let i = 0; i < barCount; i++) {
+                    ctx.fillStyle = '#ffffff';  // All bars white for full signal
+                    ctx.fillRect(
+                        trayX + (i * (barWidth + barSpacing)),
+                        trayY + (barHeights[barCount - 1] - barHeights[i]),
+                        barWidth,
+                        barHeights[i]
+                    );
+                }
+            },
+            led: { state: 'on', color: 'green' }
+        },
+        {
+            title: "Medium Signal Strength",
+            explanation: "Connected with medium signal strength",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw battery widget in top right
+                drawBattery(ctx, 75);
+                
+                // Draw connection bars with medium strength (2 bars)
+                drawSignalBars(ctx, 2);
+            },
+            led: { state: 'on', color: 'green' }
+        },
+        {
+            title: "Low Signal Strength",
+            explanation: "Connected with low signal strength",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw battery widget in top right
+                drawBattery(ctx, 75);
+                
+                // Draw connection bars with low strength (1 bar)
+                drawSignalBars(ctx, 1);
+            },
+            led: { state: 'on', color: 'green' }
+        },
+        {
+            title: "Very Low Signal Strength",
+            explanation: "Connected with very low signal strength",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw battery widget in top right
+                drawBattery(ctx, 75);
+                
+                // Draw connection bars with very low strength (0 bars)
+                drawSignalBars(ctx, 0);
+            },
+            led: { state: 'on', color: 'green' }
+        }
+    ],
     
+    "BatteryWidget": [
+        {
+            title: "Battery 100%",
+            explanation: "Battery at 100%",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                drawBattery(ctx, 100);
+            },
+            led: { state: 'on', color: 'green' }
+        },
+        {
+            title: "Battery 75%",
+            explanation: "Battery at 75%",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                drawBattery(ctx, 75);
+            },
+            led: { state: 'on', color: 'green' }
+        },
+        {
+            title: "Battery 50%",
+            explanation: "Battery at 50%",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                drawBattery(ctx, 50);
+            },
+            led: { state: 'on', color: 'green' }
+        },
+        {
+            title: "Battery 25%",
+            explanation: "Battery at 25%",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                drawBattery(ctx, 25);
+            },
+            led: { state: 'on', color: 'green' }
+        },
+        {
+            title: "Battery 10%",
+            explanation: "Battery at 10%",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                drawBattery(ctx, 10);
+            },
+            led: { state: 'on', color: 'green' }
+        },
+        {
+            title: "Battery 0%",
+            explanation: "Battery at 0%",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+
+                /*
+                 // Draw vertical rectangle (charging indicator) - sticky to the left
+                const indicatorWidth = 4;
+                const indicatorHeight = 45;
+                const indicatorX = 10; // Moved closer to left edge
+                const indicatorY = 17;
+                const cornerRadius = 2; // Radius for rounded corners
+                
+                // Draw vertical rectangle with rounded corners
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.moveTo(indicatorX + cornerRadius, indicatorY);
+                ctx.lineTo(indicatorX + indicatorWidth - cornerRadius, indicatorY);
+                ctx.arcTo(indicatorX + indicatorWidth, indicatorY, indicatorX + indicatorWidth, indicatorY + cornerRadius, cornerRadius);
+                ctx.lineTo(indicatorX + indicatorWidth, indicatorY + indicatorHeight - cornerRadius);
+                ctx.arcTo(indicatorX + indicatorWidth, indicatorY + indicatorHeight, indicatorX + indicatorWidth - cornerRadius, indicatorY + indicatorHeight, cornerRadius);
+                ctx.lineTo(indicatorX + cornerRadius, indicatorY + indicatorHeight);
+                ctx.arcTo(indicatorX, indicatorY + indicatorHeight, indicatorX, indicatorY + indicatorHeight - cornerRadius, cornerRadius);
+                ctx.lineTo(indicatorX, indicatorY + cornerRadius);
+                ctx.arcTo(indicatorX, indicatorY, indicatorX + cornerRadius, indicatorY, cornerRadius);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Draw larger centered lightning bolt
+                const boltConfig = {
+                    x: 65, // Center of screen
+                    y: 18, // Center of screen
+                    width: 30, // Larger size
+                    height: 45, // Larger size
+                    thickness: 1,
+                    angle: 0,
+                    color: '#fff'
+                };
+                
+                // Draw lightning bolt
+                ctx.save();
+                ctx.fillStyle = boltConfig.color;
+                ctx.translate(boltConfig.x, boltConfig.y);
+                ctx.rotate(boltConfig.angle * Math.PI / 180);
+                
+                const w = boltConfig.width;
+                const h = boltConfig.height;
+                
+                ctx.beginPath();
+                ctx.moveTo(w * 0.794, 0);
+                ctx.lineTo(w * 0.308, 0);
+                ctx.lineTo(0, h * 0.526);
+                ctx.lineTo(w * 0.481, h * 0.526);
+                ctx.lineTo(w * 0.264, h);
+                ctx.lineTo(w, h * 0.383);
+                ctx.lineTo(w * 0.481, h * 0.383);
+                ctx.lineTo(w * 0.794, 0);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+                
+                // Animate arrow gesture
+                const arrowX = 40; // Start from center
+                const arrowY = 40; // Center vertically
+                const arrowLength = 20;
+                const gestureDuration = 60; // 1 second for complete gesture
+                const gestureProgress = (frame % gestureDuration) / gestureDuration;
+                const scaler = 0.7;
+                
+                // Calculate arrow position with easing
+                const easeProgress = Math.sin(gestureProgress * Math.PI);
+                const currentArrowX = arrowX - (arrowLength * easeProgress); // Move left instead of right
+                
+                    // Draw animated arrow as a solid triangle
+                ctx.beginPath();
+                ctx.moveTo(currentArrowX, arrowY); // Tip of triangle
+                ctx.lineTo(currentArrowX + 15 * scaler, arrowY - 10 * scaler); // Top point
+                ctx.lineTo(currentArrowX + 15 * scaler, arrowY + 10 * scaler); // Bottom point
+                ctx.closePath();
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+                
+                // Draw line from center to triangle
+                ctx.beginPath();
+                ctx.moveTo(arrowX, arrowY);
+                //ctx.lineTo(currentArrowX + 15 * scaler, arrowY);
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                */
+
+                
+                // Blink the entire battery every 30 frames (0.5 seconds)
+                const shouldShow = Math.floor(frame / 30) % 2 === 0;
+                if (shouldShow) {
+                    const x = 130;
+                    const y = 5;
+                    const width = 20;
+                    const height = 10;
+                    const radius = 0.5;
+                    
+                    // Battery outline
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(x + radius, y);
+                    ctx.lineTo(x + width - radius, y);
+                    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                    ctx.lineTo(x + width, y + height - radius);
+                    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                    ctx.lineTo(x + radius, y + height);
+                    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                    ctx.lineTo(x, y + radius);
+                    ctx.quadraticCurveTo(x, y, x + radius, y);
+                    ctx.closePath();
+                    ctx.stroke();
+                    
+                    // Battery tip
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(x + width, y + 2, 2, height - 4);
+                    
+                    // Battery level
+                    ctx.fillStyle = '#ff0000';
+                    ctx.beginPath();
+                    ctx.moveTo(x + 1 + radius, y + 1);
+                    ctx.lineTo(x + 1 + radius, y + 1);
+                    ctx.quadraticCurveTo(x + 1, y + 1, x + 1, y + 1 + radius);
+                    ctx.lineTo(x + 1, y + height - 1 - radius);
+                    ctx.quadraticCurveTo(x + 1, y + height - 1, x + 1 + radius, y + height - 1);
+                    ctx.lineTo(x + 1 + radius, y + height - 1);
+                    ctx.quadraticCurveTo(x + 1, y + height - 1, x + 1, y + height - 1 - radius);
+                    ctx.lineTo(x + 1, y + 1 + radius);
+                    ctx.quadraticCurveTo(x + 1, y + 1, x + 1 + radius, y + 1);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            },
+            led: { state: 'breathing', color: 'red' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Battery 0%") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Battery Charging",
+            explanation: "Battery is charging",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw empty battery
+                drawBattery(ctx, 0);
+                
+                // Calculate lightning bolt position (centered in battery)
+                const x = 130;  // Same x as battery
+                const y = 5;    // Same y as battery
+                const width = 20;
+                const height = 15;
+                
+                // Calculate pulse effect for lightning bolt
+                const pulseIntensity = 0.4;
+                const pulseSpeed = 0.1;
+                const pulseOffset = Math.sin(frame * pulseSpeed) * pulseIntensity;
+                const boltOpacity = 0.7 + pulseOffset;
+                
+                // Lightning bolt configuration
+                const boltConfig = {
+                    x: x + width/2 - 7,  // Center the bolt (width is 14)
+                    y: y + height/2 - 11, // Center the bolt (height is 22)
+                    width: 14,
+                    height: 22,
+                    thickness: 1,
+                    angle: 0,
+                    color: `rgba(255, 255, 255, 1)`
+                };
+                
+                // Draw lightning bolt
+                ctx.save();
+                ctx.fillStyle = boltConfig.color;
+                ctx.translate(boltConfig.x, boltConfig.y);
+                ctx.rotate(boltConfig.angle * Math.PI / 180);
+                
+                const w = boltConfig.width;
+                const h = boltConfig.height;
+                
+                ctx.beginPath();
+                ctx.moveTo(w * 0.794, 0);
+                ctx.lineTo(w * 0.308, 0);
+                ctx.lineTo(0, h * 0.526);
+                ctx.lineTo(w * 0.481, h * 0.526);
+                ctx.lineTo(w * 0.264, h);
+                ctx.lineTo(w, h * 0.383);
+                ctx.lineTo(w * 0.481, h * 0.383);
+                ctx.lineTo(w * 0.794, 0);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            },
+            led: { state: 'breathing', color: 'white' }
+        }
+    ]
 };
 
 // Initialize canvas
@@ -3052,6 +3679,67 @@ function drawSuccessAnimationlink(ctx, frame) {
     
     return frame < totalDuration; // Return true if animation should continue
 }
+function drawSuccessAnimationConnect(ctx, frame) {
+    // Animation phases
+    const fullHeightDuration = 60;  // 1 second full height
+    const minimizeDuration = 30;    // 0.5 seconds minimize
+    const textDuration = 180;       // 3 seconds with text
+    const totalDuration = fullHeightDuration + minimizeDuration + textDuration;
+    
+    // Calculate progress for each phase
+    const fullHeightProgress = Math.min(1, frame / fullHeightDuration);
+    const minimizeProgress = Math.max(0, Math.min(1, (frame - fullHeightDuration) / minimizeDuration));
+    const textProgress = Math.max(0, Math.min(1, (frame - fullHeightDuration - minimizeDuration) / 30));
+    
+    // Calculate sizes and positions
+    const strokeWidth = 3;
+    const fullSize = 25;  // (80 - strokeWidth*2)/2 to account for stroke width
+    const smallSize = 15; // Increased minimized size
+    const currentSize = frame < fullHeightDuration ? fullSize : 
+                       fullSize - (fullSize - smallSize) * minimizeProgress;
+    
+    // Calculate positions - centered in the screen
+    const centerX = 80;  // Center of screen (160/2)
+    const centerY = 30;  // Center of screen (80/2)
+    
+    // Calculate final position offset
+    const finalX = centerX + 0; // Move right by 50 pixels when minimized
+    const finalY = centerY - 10; // Move up by 10 pixels when minimized
+    
+    // Calculate current position based on animation progress
+    const currentX = frame < fullHeightDuration ? centerX : 
+                    centerX + ((finalX - centerX) * minimizeProgress);
+    const currentY = frame < fullHeightDuration ? centerY : 
+                    centerY + ((finalY - centerY) * minimizeProgress);
+    
+    // Draw animated circle
+    ctx.strokeStyle = '#00ff00';
+    ctx.lineWidth = strokeWidth;
+    ctx.beginPath();
+    ctx.arc(currentX, currentY, currentSize, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Draw checkmark (scaled with circle)
+    const checkScale = currentSize / fullSize;
+    const checkOffset = 16 * checkScale; // Adjusted for new size
+    ctx.beginPath();
+    ctx.moveTo(currentX - checkOffset, currentY);
+    ctx.lineTo(currentX - checkOffset/2, currentY + checkOffset/2);
+    ctx.lineTo(currentX + checkOffset, currentY - checkOffset/2);
+    ctx.stroke();
+    
+    // Draw text when minimized
+    if (frame >= fullHeightDuration + minimizeDuration) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${textProgress})`;
+        ctx.font = '20px Barlow';
+        ctx.fontWeight = '400';
+        ctx.textAlign = 'center';
+        ctx.fillText('Connected', centerX, 55); // Keep text centered
+    }
+    
+    return frame < totalDuration; // Return true if animation should continue
+}
+
 // Add the new reusable battery animation function
 function drawAnimatedBattery(ctx, frame, options = {}) {
     const {
@@ -3716,4 +4404,27 @@ function secondsToFrames(seconds) {
 // Helper function to convert frames to seconds
 function framesToSeconds(frames) {
     return frames / (FRAME_RATE * TIMING_MULTIPLIER);
+}
+
+// Add this function after the drawBattery function
+function drawSignalBars(ctx, strength) {
+    const x = 130;  // Same x as battery
+    const y = 5;    // Same y as battery
+    const barCount = 3;
+    const barWidth = 3;
+    const barSpacing = 2;
+    const barHeights = [5, 8, 11]; // Heights for each bar
+    const trayX = x - (barCount * (barWidth + barSpacing)) - 5; // Position bars to the left of battery
+    const trayY = y + 0;  // Moved 1px higher (was y + 2)
+    
+    // Draw each bar
+    for (let i = 0; i < barCount; i++) {
+        ctx.fillStyle = i < strength ? '#ffffff' : '#333333';  // White for active bars, dark gray for inactive
+        ctx.fillRect(
+            trayX + (i * (barWidth + barSpacing)),
+            trayY + (barHeights[barCount - 1] - barHeights[i]),
+            barWidth,
+            barHeights[i]
+        );
+    }
 }
