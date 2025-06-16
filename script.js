@@ -252,7 +252,7 @@ const flows = {
         },
         {
             title: "On",
-            explanation: "Device is powered on. It is automatically searching for a connection.",
+            explanation: "Device is powered on. It is automatically searching for a connection. (Additional option found in connection flow)",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -395,7 +395,7 @@ const flows = {
         },
         {
             title: "Shutdown",
-            explanation: "Press and hold the power button to initiate shutdown.",
+            explanation: "Press and hold the power button for 5 seconds to initiate shutdown.",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -895,9 +895,9 @@ const flows = {
                 ctx.restore();
                 
                 // Animate arrow gesture
-                const arrowX = 40; // Start from center
+                const arrowX = 30; // Start from center
                 const arrowY = 40; // Center vertically
-                const arrowLength = 20;
+                const arrowLength = 10;
                 const gestureDuration = 60; // 1 second for complete gesture
                 const gestureProgress = (frame % gestureDuration) / gestureDuration;
                 const scaler = 0.7;
@@ -2448,7 +2448,7 @@ const flows = {
         },
         {
             title: "Blue Loading Animation",
-            explanation: "A blue loading animation that indicates processing or loading state.",
+            explanation: "A blue loading animation test which indicates processing or loading state. Unlikely to be used in production.",
             draw: (ctx, frame) => {
                 // Clear the canvas
                 ctx.fillStyle = '#000';
@@ -2497,7 +2497,7 @@ const flows = {
         },
         {
             title: "White Loading Animation",
-            explanation: "A white loading animation that indicates processing or loading state.",
+            explanation: "A white loading animation that indicates processing or loading state. Clearer and less distracting. Bouce is used in the animation to give a more dynamic feel.",
             draw: (ctx, frame) => {
                 // Clear the canvas
                 ctx.fillStyle = '#000';
@@ -2548,7 +2548,7 @@ const flows = {
     "Connection Animations": [
         {
             title: "WiFi Search GIF",
-            explanation: "Searching for networks with animated GIF",
+            explanation: "Searching for networks known networks.",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -2614,7 +2614,7 @@ const flows = {
         },
         {
             title: "WiFi Search GIF 2/3",
-            explanation: "Searching for networks with animated GIF in 2/3 position",
+            explanation: "Indicates that a known network is being connected to.",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -2732,7 +2732,7 @@ const flows = {
         },
         {
             title: "Successfully connected to Home_32",
-            explanation: "Successfully connected to Home_32",
+            explanation: "Persistent connection symbol in tray displays connection status and strength.",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -2809,6 +2809,21 @@ const flows = {
                 drawSignalBars(ctx, 0);
             },
             led: { state: 'on', color: 'green' }
+        },
+        {
+            title: "No Network Connection",
+            explanation: "Unit is not connected to any network",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw battery widget in top right
+                drawBattery(ctx, 75);
+                
+                // Draw all connection bars at minimal height (2px)
+                drawSignalBars(ctx, -1);
+            },
+            led: { state: 'on', color: 'red' }
         }
     ],
     
@@ -2865,7 +2880,7 @@ const flows = {
         },
         {
             title: "Battery 0%",
-            explanation: "Battery at 0%",
+            explanation: "Battery at 0%. The unit will force a shutdown.",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -3018,7 +3033,7 @@ const flows = {
         },
         {
             title: "Battery Charging",
-            explanation: "Battery is charging",
+            explanation: "Battery is charging. LED indicator is taking the status of the operation, not the charger. Tray icon will demonstrate charging in progress.",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -4413,7 +4428,7 @@ function drawSignalBars(ctx, strength) {
     const barCount = 3;
     const barWidth = 3;
     const barSpacing = 2;
-    const barHeights = [5, 8, 11]; // Heights for each bar
+    const barHeights = strength === -1 ? [2, 2, 2] : [5, 8, 11]; // All bars 2px tall for no connection
     const trayX = x - (barCount * (barWidth + barSpacing)) - 5; // Position bars to the left of battery
     const trayY = y + 0;  // Moved 1px higher (was y + 2)
     
