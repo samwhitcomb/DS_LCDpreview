@@ -11,6 +11,15 @@ const CENTER_POSITION = {
     size: 30
 };
 
+// Load custom fonts
+const barlowFont = new FontFace('Barlow', 'url(fonts/Barlow_600SemiBold.ttf)');
+barlowFont.load().then((font) => {
+    document.fonts.add(font);
+    console.log('Barlow font loaded successfully');
+}).catch((error) => {
+    console.error('Error loading Barlow font:', error);
+});
+
 // Add cable state management
 let isCableVisible = false;
 
@@ -2829,22 +2838,24 @@ const flows = {
     
     "BatteryWidget": [
         {
-            title: "Battery 100%",
-            explanation: "Battery at 100%",
+            title: "Battery 0%",
+            explanation: "Battery completely empty",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
-                drawBattery(ctx, 100);
+                
+                drawSVGBatteryWidget(ctx, 0);
             },
-            led: { state: 'on', color: 'green' }
+            led: { state: 'breathing', color: 'red' }
         },
         {
-            title: "Battery 75%",
-            explanation: "Battery at 75%",
+            title: "Battery 25%",
+            explanation: "Battery at 25%",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
-                drawBattery(ctx, 75);
+                
+                drawSVGBatteryWidget(ctx, 25);
             },
             led: { state: 'on', color: 'green' }
         },
@@ -2854,239 +2865,43 @@ const flows = {
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
-                drawBattery(ctx, 50);
+                
+                drawSVGBatteryWidget(ctx, 50);
             },
             led: { state: 'on', color: 'green' }
         },
         {
-            title: "Battery 25%",
-            explanation: "Battery at 25%",
+            title: "Battery 75%",
+            explanation: "Battery at 75%",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
-                drawBattery(ctx, 25);
+                
+                drawSVGBatteryWidget(ctx, 75);
             },
             led: { state: 'on', color: 'green' }
         },
         {
-            title: "Battery 10%",
-            explanation: "Battery at 10%",
+            title: "Battery 100%",
+            explanation: "Battery fully charged",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
-                drawBattery(ctx, 10);
+                
+                drawSVGBatteryWidget(ctx, 100);
             },
             led: { state: 'on', color: 'green' }
         },
         {
-            title: "Battery 0%",
-            explanation: "Battery at 0%. The unit will force a shutdown.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-
-                /*
-                 // Draw vertical rectangle (charging indicator) - sticky to the left
-                const indicatorWidth = 4;
-                const indicatorHeight = 45;
-                const indicatorX = 10; // Moved closer to left edge
-                const indicatorY = 17;
-                const cornerRadius = 2; // Radius for rounded corners
-                
-                // Draw vertical rectangle with rounded corners
-                ctx.fillStyle = '#fff';
-                ctx.beginPath();
-                ctx.moveTo(indicatorX + cornerRadius, indicatorY);
-                ctx.lineTo(indicatorX + indicatorWidth - cornerRadius, indicatorY);
-                ctx.arcTo(indicatorX + indicatorWidth, indicatorY, indicatorX + indicatorWidth, indicatorY + cornerRadius, cornerRadius);
-                ctx.lineTo(indicatorX + indicatorWidth, indicatorY + indicatorHeight - cornerRadius);
-                ctx.arcTo(indicatorX + indicatorWidth, indicatorY + indicatorHeight, indicatorX + indicatorWidth - cornerRadius, indicatorY + indicatorHeight, cornerRadius);
-                ctx.lineTo(indicatorX + cornerRadius, indicatorY + indicatorHeight);
-                ctx.arcTo(indicatorX, indicatorY + indicatorHeight, indicatorX, indicatorY + indicatorHeight - cornerRadius, cornerRadius);
-                ctx.lineTo(indicatorX, indicatorY + cornerRadius);
-                ctx.arcTo(indicatorX, indicatorY, indicatorX + cornerRadius, indicatorY, cornerRadius);
-                ctx.closePath();
-                ctx.fill();
-                
-                // Draw larger centered lightning bolt
-                const boltConfig = {
-                    x: 65, // Center of screen
-                    y: 18, // Center of screen
-                    width: 30, // Larger size
-                    height: 45, // Larger size
-                    thickness: 1,
-                    angle: 0,
-                    color: '#fff'
-                };
-                
-                // Draw lightning bolt
-                ctx.save();
-                ctx.fillStyle = boltConfig.color;
-                ctx.translate(boltConfig.x, boltConfig.y);
-                ctx.rotate(boltConfig.angle * Math.PI / 180);
-                
-                const w = boltConfig.width;
-                const h = boltConfig.height;
-                
-                ctx.beginPath();
-                ctx.moveTo(w * 0.794, 0);
-                ctx.lineTo(w * 0.308, 0);
-                ctx.lineTo(0, h * 0.526);
-                ctx.lineTo(w * 0.481, h * 0.526);
-                ctx.lineTo(w * 0.264, h);
-                ctx.lineTo(w, h * 0.383);
-                ctx.lineTo(w * 0.481, h * 0.383);
-                ctx.lineTo(w * 0.794, 0);
-                ctx.closePath();
-                ctx.fill();
-                ctx.restore();
-                
-                // Animate arrow gesture
-                const arrowX = 40; // Start from center
-                const arrowY = 40; // Center vertically
-                const arrowLength = 20;
-                const gestureDuration = 60; // 1 second for complete gesture
-                const gestureProgress = (frame % gestureDuration) / gestureDuration;
-                const scaler = 0.7;
-                
-                // Calculate arrow position with easing
-                const easeProgress = Math.sin(gestureProgress * Math.PI);
-                const currentArrowX = arrowX - (arrowLength * easeProgress); // Move left instead of right
-                
-                    // Draw animated arrow as a solid triangle
-                ctx.beginPath();
-                ctx.moveTo(currentArrowX, arrowY); // Tip of triangle
-                ctx.lineTo(currentArrowX + 15 * scaler, arrowY - 10 * scaler); // Top point
-                ctx.lineTo(currentArrowX + 15 * scaler, arrowY + 10 * scaler); // Bottom point
-                ctx.closePath();
-                ctx.fillStyle = '#fff';
-                ctx.fill();
-                
-                // Draw line from center to triangle
-                ctx.beginPath();
-                ctx.moveTo(arrowX, arrowY);
-                //ctx.lineTo(currentArrowX + 15 * scaler, arrowY);
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                */
-
-                
-                // Blink the entire battery every 30 frames (0.5 seconds)
-                const shouldShow = Math.floor(frame / 30) % 2 === 0;
-                if (shouldShow) {
-                    const x = 130;
-                    const y = 5;
-                    const width = 20;
-                    const height = 10;
-                    const radius = 0.5;
-                    
-                    // Battery outline
-                    ctx.strokeStyle = '#fff';
-                    ctx.lineWidth = 1;
-                    ctx.beginPath();
-                    ctx.moveTo(x + radius, y);
-                    ctx.lineTo(x + width - radius, y);
-                    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-                    ctx.lineTo(x + width, y + height - radius);
-                    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-                    ctx.lineTo(x + radius, y + height);
-                    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-                    ctx.lineTo(x, y + radius);
-                    ctx.quadraticCurveTo(x, y, x + radius, y);
-                    ctx.closePath();
-                    ctx.stroke();
-                    
-                    // Battery tip
-                    ctx.fillStyle = '#fff';
-                    ctx.fillRect(x + width, y + 2, 2, height - 4);
-                    
-                    // Battery level
-                    ctx.fillStyle = '#ff0000';
-                    ctx.beginPath();
-                    ctx.moveTo(x + 1 + radius, y + 1);
-                    ctx.lineTo(x + 1 + radius, y + 1);
-                    ctx.quadraticCurveTo(x + 1, y + 1, x + 1, y + 1 + radius);
-                    ctx.lineTo(x + 1, y + height - 1 - radius);
-                    ctx.quadraticCurveTo(x + 1, y + height - 1, x + 1 + radius, y + height - 1);
-                    ctx.lineTo(x + 1 + radius, y + height - 1);
-                    ctx.quadraticCurveTo(x + 1, y + height - 1, x + 1, y + height - 1 - radius);
-                    ctx.lineTo(x + 1, y + 1 + radius);
-                    ctx.quadraticCurveTo(x + 1, y + 1, x + 1 + radius, y + 1);
-                    ctx.closePath();
-                    ctx.fill();
-                }
-            },
-            led: { state: 'breathing', color: 'red' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Battery 0%") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Battery Charging",
-            explanation: "Battery is charging. LED indicator is taking the status of the operation, not the charger. Tray icon will demonstrate charging in progress.",
+            title: "Battery 10% Low",
+            explanation: "Battery critically low at 10%",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 
-                // Draw empty battery
-                drawBattery(ctx, 0);
-                
-                // Calculate lightning bolt position (centered in battery)
-                const x = 130;  // Same x as battery
-                const y = 5;    // Same y as battery
-                const width = 20;
-                const height = 15;
-                
-                // Calculate pulse effect for lightning bolt
-                const pulseIntensity = 0.4;
-                const pulseSpeed = 0.1;
-                const pulseOffset = Math.sin(frame * pulseSpeed) * pulseIntensity;
-                const boltOpacity = 0.7 + pulseOffset;
-                
-                // Lightning bolt configuration
-                const boltConfig = {
-                    x: x + width/2 - 7,  // Center the bolt (width is 14)
-                    y: y + height/2 - 11, // Center the bolt (height is 22)
-                    width: 14,
-                    height: 22,
-                    thickness: 1,
-                    angle: 0,
-                    color: `rgba(255, 255, 255, 1)`
-                };
-                
-                // Draw lightning bolt
-                ctx.save();
-                ctx.fillStyle = boltConfig.color;
-                ctx.translate(boltConfig.x, boltConfig.y);
-                ctx.rotate(boltConfig.angle * Math.PI / 180);
-                
-                const w = boltConfig.width;
-                const h = boltConfig.height;
-                
-                ctx.beginPath();
-                ctx.moveTo(w * 0.794, 0);
-                ctx.lineTo(w * 0.308, 0);
-                ctx.lineTo(0, h * 0.526);
-                ctx.lineTo(w * 0.481, h * 0.526);
-                ctx.lineTo(w * 0.264, h);
-                ctx.lineTo(w, h * 0.383);
-                ctx.lineTo(w * 0.481, h * 0.383);
-                ctx.lineTo(w * 0.794, 0);
-                ctx.closePath();
-                ctx.fill();
-                ctx.restore();
+                drawSVGBatteryWidget(ctx, 10);
             },
-            led: { state: 'on', color: 'green' }
+            led: { state: 'breathing', color: 'red' }
         }
     ]
 };
@@ -4442,4 +4257,153 @@ function drawSignalBars(ctx, strength) {
             barHeights[i]
         );
     }
+}
+
+// New battery widget drawing function based on React component
+function drawNewBatteryWidget(ctx, level, isCharging) {
+    // Position the battery widget in the center of the screen
+    const centerX = 80;
+    const centerY = 40;
+    
+    // Battery dimensions (scaled from React component)
+    const batteryWidth = 42.3;
+    const batteryHeight = 23.5;
+    const batteryX = centerX - batteryWidth / 2;
+    const batteryY = centerY - batteryHeight / 2;
+    const borderRadius = 4.18;
+    
+    // Battery tip dimensions
+    const tipWidth = 2.5;
+    const tipHeight = 9.2;
+    const tipX = batteryX + batteryWidth;
+    const tipY = batteryY + (batteryHeight - tipHeight) / 2;
+    
+    // Draw battery outline (batteryChild)
+    ctx.fillStyle = '#767676';  // Gray background
+    ctx.beginPath();
+    ctx.roundRect(batteryX, batteryY, batteryWidth, batteryHeight, borderRadius);
+    ctx.fill();
+    
+    // Draw battery level fill
+    const fillWidth = (batteryWidth - 2) * (level / 100);
+    ctx.fillStyle = level > 20 ? '#00ca48' : '#ff0000';  // Green when >20%, red when low
+    ctx.beginPath();
+    ctx.roundRect(batteryX + 1, batteryY + 1, fillWidth, batteryHeight - 2, borderRadius - 1);
+    ctx.fill();
+    
+    // Draw battery tip (subtractIcon)
+    ctx.fillStyle = '#767676';
+    ctx.fillRect(tipX, tipY, tipWidth, tipHeight);
+    
+    // Draw percentage text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '600 22.68px Barlow';
+    ctx.textAlign = 'left';
+    ctx.fillText(level.toString(), batteryX + 3.52, batteryY + 20);
+    
+    // Draw lightning icon if charging
+    if (isCharging) {
+        const lightningX = batteryX + 28.52;
+        const lightningY = batteryY + 6.9;
+        const lightningWidth = 11.4;
+        const lightningHeight = 16.2;
+        
+        // Draw lightning bolt
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(lightningX + lightningWidth * 0.5, lightningY);
+        ctx.lineTo(lightningX + lightningWidth * 0.3, lightningY + lightningHeight * 0.4);
+        ctx.lineTo(lightningX + lightningWidth * 0.7, lightningY + lightningHeight * 0.4);
+        ctx.lineTo(lightningX + lightningWidth * 0.4, lightningY + lightningHeight);
+        ctx.lineTo(lightningX + lightningWidth * 0.6, lightningY + lightningHeight * 0.6);
+        ctx.lineTo(lightningX + lightningWidth * 0.2, lightningY + lightningHeight * 0.6);
+        ctx.closePath();
+        ctx.fill();
+    }
+}
+
+// SVG-based battery widget drawing function
+function drawSVGBatteryWidget(ctx, level) {
+    // Position the battery widget in the top right of the LCD
+    const batteryHeight = 15; // Fixed height as requested
+    const batteryWidth = (42.2771 / 23.4655) * batteryHeight; // Maintain aspect ratio
+    const batteryX = 160 - batteryWidth - 5; // 5px from right edge
+    const batteryY = 5; // 5px from top
+    const borderRadius = (4.1844 / 23.4655) * batteryHeight; // Scale radius proportionally
+    
+    // Battery tip dimensions scaled proportionally
+    const tipWidth = (2.5 / 23.4655) * batteryHeight;
+    const tipHeight = (9.2 / 23.4655) * batteryHeight;
+    const tipX = batteryX + batteryWidth;
+    const tipY = batteryY + (batteryHeight - tipHeight) / 2;
+    
+    // Draw battery outline (gray background)
+    ctx.fillStyle = '#767676';
+    ctx.beginPath();
+    ctx.roundRect(batteryX, batteryY, batteryWidth, batteryHeight, borderRadius);
+    ctx.fill();
+    
+    // Draw battery tip
+    ctx.fillStyle = '#767676';
+    ctx.fillRect(tipX, tipY, tipWidth, tipHeight);
+    
+    // Draw battery level fill with proper radius on left side, sharp on right
+    if (level > 0) {
+        const fillWidth = batteryWidth * (level / 100);
+        const fillColor = level > 20 ? '#ffffff' : '#ff0000'; // White when >20%, red when low
+        
+        ctx.fillStyle = fillColor;
+        ctx.beginPath();
+        
+        // Check if fill reaches the right side radius
+        const rightRadiusStart = batteryX + batteryWidth - borderRadius;
+        
+        if (fillWidth >= batteryWidth - borderRadius) {
+            // Fill reaches the right side radius - use rounded right edge
+            ctx.moveTo(batteryX + borderRadius, batteryY);
+            ctx.lineTo(rightRadiusStart, batteryY);
+            ctx.quadraticCurveTo(batteryX + batteryWidth, batteryY, batteryX + batteryWidth, batteryY + borderRadius);
+            ctx.lineTo(batteryX + batteryWidth, batteryY + batteryHeight - borderRadius);
+            ctx.quadraticCurveTo(batteryX + batteryWidth, batteryY + batteryHeight, rightRadiusStart, batteryY + batteryHeight);
+            ctx.lineTo(batteryX + borderRadius, batteryY + batteryHeight);
+        } else {
+            // Fill doesn't reach the right side radius - use sharp right edge
+            ctx.moveTo(batteryX + borderRadius, batteryY);
+            ctx.lineTo(batteryX + fillWidth, batteryY);
+            ctx.lineTo(batteryX + fillWidth, batteryY + batteryHeight);
+            ctx.lineTo(batteryX + borderRadius, batteryY + batteryHeight);
+        }
+        
+        // Left edge with radius (always rounded)
+        ctx.quadraticCurveTo(batteryX, batteryY + batteryHeight, batteryX, batteryY + batteryHeight - borderRadius);
+        ctx.lineTo(batteryX, batteryY + borderRadius);
+        ctx.quadraticCurveTo(batteryX, batteryY, batteryX + borderRadius, batteryY);
+        
+        ctx.closePath();
+        ctx.fill();
+    }
+    
+    // Draw percentage text (smaller for top-right position)
+    ctx.fillStyle = '#000000';
+    ctx.font = '600 14px Barlow, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(level.toString(), batteryX + batteryWidth / 2, batteryY + batteryHeight / 2);
+}
+
+// Helper function for rounded rectangles (if not available)
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radius) {
+        this.beginPath();
+        this.moveTo(x + radius, y);
+        this.lineTo(x + width - radius, y);
+        this.quadraticCurveTo(x + width, y, x + width, y + radius);
+        this.lineTo(x + width, y + height - radius);
+        this.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        this.lineTo(x + radius, y + height);
+        this.quadraticCurveTo(x, y + height, x, y + height - radius);
+        this.lineTo(x, y + radius);
+        this.quadraticCurveTo(x, y, x + radius, y);
+        this.closePath();
+    };
 }

@@ -1,20 +1,31 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LCD Device Simulator</title>
+    <title>LCD Device Simulator - Español</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script>
+        window.APP_LANG = 'es';
+    </script>
+    <style>
+        @font-face {
+            font-family: 'Barlow Light';
+            src: url('fonts/Barlow_300Light.ttf') format('truetype');
+            font-weight: 300;
+            font-style: normal;
+        }
+    </style>
 </head>
 <body>
     <div class="language-selector">
-        <a href="index.html" class="lang-link active">EN</a>
+        <a href="index.html" class="lang-link">EN</a>
         <span class="lang-sep">|</span>
         <a href="Japanese.html" class="lang-link">日本語</a>
         <span class="lang-sep">|</span>
-        <a href="Spanish.html" class="lang-link">Español</a>
+        <a href="Spanish.html" class="lang-link active">Español</a>
     </div>
     <div class="container">
         <div class="device-container">
@@ -57,42 +68,8 @@
         </div>
     </div>
     <script>
-        // Set default language for this page
-        window.APP_LANG = 'en';
         (function() {
             const translations = {
-                ja: {
-                    'Shutting down': 'シャットダウン中',
-                    'Searching': '検索中',
-                    'Connecting': '接続中',
-                    'Connected': '接続完了',
-                    'Press and hold': '電源ボタンを長押し',
-                    'power button': '',
-                    'to shutdown': 'して終了',
-                    'Device': 'デバイス',
-                    'Powered Off': '電源オフ',
-                    'Linking': 'リンク中',
-                    'Firmware 1.43': 'ファームウェア 1.43',
-                    'Fw 1.43': 'FW 1.43',
-                    'Ready': '準備完了',
-                    'Remaining:': '残り時間:',
-                    'Restarting': '再起動中',
-                    'Charger': '充電器',
-                    'Disconnected': '切断',
-                    'Update Failed': 'アップデート失敗',
-                    'Please try again': 'もう一度お試しください',
-                    'System Error': 'システムエラー',
-                    'Restart Required': '再起動が必要です',
-                    'Critical Error': '重大なエラー',
-                    'Auto-Restarting...': '自動再起動中...',
-                    'Hardware Error': 'ハードウェアエラー',
-                    'Contact Support': 'サポートに連絡',
-                    'Memory Error': 'メモリエラー',
-                    'Sensor Error': 'センサーエラー',
-                    'Recalibration Needed': '再キャリブレーションが必要',
-                    'Update Complete': 'アップデート完了',
-                    'Linking Complete': 'リンク完了'
-                },
                 es: {
                     'Shutting down': 'Apagando',
                     'Searching': 'Buscando',
@@ -104,8 +81,8 @@
                     'Device': 'Dispositivo',
                     'Powered Off': 'Apagado',
                     'Linking': 'Vinculando',
-                    'Firmware 1.43': 'Firmware 1.43',
-                    'Fw 1.43': 'Firmware 1.43',
+                    'Firmware 1.43': 'FW 1.43',
+                    'Fw 1.43': 'FW 1.43',
                     'Ready': 'Listo',
                     'Remaining:': 'Restante:',
                     'Restarting': 'Reiniciando',
@@ -122,11 +99,11 @@
                     'Memory Error': 'Error de memoria',
                     'Sensor Error': 'Error del sensor',
                     'Recalibration Needed': 'Se requiere recalibración',
-                    'Update Complete': 'Actualización completa',
-                    'Linking Complete': 'Vinculación completa'
+                    'Update Complete': 'Actualizado',
+                    'Linking Complete': 'Vinculado'
                 }
             };
-            const lang = (window.APP_LANG || 'en');
+            const lang = (window.APP_LANG || 'es');
             const proto = CanvasRenderingContext2D && CanvasRenderingContext2D.prototype;
             if (!proto || proto.__i18nPatched) return;
             function translate(text) {
@@ -137,6 +114,7 @@
             }
             const _fillText = proto.fillText;
             const _strokeText = proto.strokeText;
+            // Maintain shared sizing between related lines
             const groups = {
                 shutdownInstruction: [
                     'Press and hold',
@@ -193,7 +171,7 @@
                 return { lines, lineHeight };
             }
             function drawWrapped(drawFunc, ctx, text, x, y, targetWidth) {
-                const { lines, lineHeight } = buildLines(ctx, text, targetWidth, (window.APP_LANG || 'en'));
+                const { lines, lineHeight } = buildLines(ctx, text, targetWidth, (window.APP_LANG || 'es'));
                 if (lines.length === 0) return;
                 for (let i = 0; i < lines.length; i++) {
                     drawFunc.call(ctx, lines[i], x, y + i * lineHeight);
@@ -261,4 +239,6 @@
     </script>
     <script src="script.js"></script>
 </body>
-</html> 
+</html>
+
+
