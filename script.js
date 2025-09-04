@@ -813,6 +813,7 @@ const flows = {
         {
             title: "Linking Complete",
             explanation: "Device has been successfully linked to your account.",
+            referenceImage: "Assets/ScreenCaps/🟢 Conection/ConnectingDirect.jpg",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -952,6 +953,7 @@ const flows = {
         {
             title: "Update Ready",
             explanation: "Firmware update ready to start",
+            referenceImage: "Assets/ScreenCaps/🟢 Conection/Firware Update information.jpeg",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -2703,6 +2705,7 @@ const flows = {
         {
             title: "Connection Success23",
             explanation: "successfully connected to the selected network",
+            referenceImage: "Assets/ScreenCaps/🟢 Conection/ConnectingWifi.jpg",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -3105,6 +3108,18 @@ function populateFlowSelect() {
 }
 
 // Function to update the display
+function updateReferenceImage(currentState) {
+    const referenceImageSection = document.getElementById('referenceImageSection');
+    const referenceImage = document.getElementById('referenceImage');
+    
+    if (currentState.referenceImage) {
+        referenceImage.src = currentState.referenceImage;
+        referenceImageSection.style.display = 'block';
+    } else {
+        referenceImageSection.style.display = 'none';
+    }
+}
+
 function updateDisplay() {
     const currentStates = flows[currentFlow];
     const currentState = currentStates[currentStateIndex];
@@ -3176,6 +3191,9 @@ function updateDisplay() {
     // Update button states
     prevButton.disabled = currentStateIndex === 0;
     nextButton.disabled = currentStateIndex === currentStates.length - 1;
+    
+    // Update reference image
+    updateReferenceImage(currentState);
 }
 
 // Event listeners for navigation
