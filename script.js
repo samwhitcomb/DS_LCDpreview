@@ -1815,13 +1815,20 @@ const flows = {
             explanation: "Typical shot state pattern. Balls can only be detected when the ready is shown and the LED turns green.",
             referenceImage: "Assets/ScreenCaps/🟢 Gameplay/Gameplay/WhilePlaying.png",
             draw: (ctx, frame) => {
-                // Clear the canvas
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
-
-                // Draw battery and WiFi
-                drawBattery(ctx, 85);
-                drawWifiStatus(ctx, 'connected', frame, false);
+                
+                // Draw battery widget in top right
+                drawBattery(ctx, 75);  // Show 75% battery level
+                
+                // Draw linked green symbol to the left of battery
+                if (linkedGreenImgLoaded) {
+                    const x = 105;  // Position to the left of battery
+                    const y = 3;    // Same y as battery
+                    const width = 20;
+                    const height = 15;
+                    ctx.drawImage(linkedGreenImg, x, y, width, height);
+                }
             },
             led: { state: 'on', color: 'red' }, // Initial LED state is always white breathing
             onEnter: () => {
@@ -1906,6 +1913,7 @@ const flows = {
                                 shotDetected = false;
                                 // Restart the entire shot sequence
                                 startTime = Date.now();
+                                currentState.startTime = startTime; // Update the start time in current state
                                 sequenceStage = 0;
                                 img.src = 'Assets/White_Loading.gif';
                                 currentState.led = { state: 'on', color: 'red' };
@@ -2542,6 +2550,17 @@ microQRImg.src = 'Assets/qr.svg';
 let microQRImgLoaded = false;
 microQRImg.onload = function() { microQRImgLoaded = true; updateDisplay(); };
 
+// Preload linked images
+const linkedGreenImg = new Image();
+linkedGreenImg.src = 'Assets/Linked Green.png';
+let linkedGreenImgLoaded = false;
+linkedGreenImg.onload = function() { linkedGreenImgLoaded = true; };
+
+const linkedRedImg = new Image();
+linkedRedImg.src = 'Assets/Linked Red.png';
+let linkedRedImgLoaded = false;
+linkedRedImg.onload = function() { linkedRedImgLoaded = true; };
+
 // Add these variables at the top with other state variables
 let rollDegrees = 0;
 let pitchDegrees = 0;
@@ -2799,10 +2818,8 @@ function updateDisplay() {
     // Show/hide shot button based on current flow and state
     if (currentFlow === 'ShotState' && currentStateIndex === 0) {
         hitShotButton.style.display = 'block';
-        // Enable/disable based on sequence stage (only when ready)
-        const elapsedTime = Date.now() - (currentState.startTime || Date.now());
-        const isReady = elapsedTime >= 5000; // After 5 seconds when Ready.png is shown
-        hitShotButton.disabled = !isReady;
+        // Enable the button - it will be disabled temporarily when clicked
+        hitShotButton.disabled = false;
     } else {
         hitShotButton.style.display = 'none';
     }
@@ -2828,7 +2845,9 @@ nextButton.addEventListener('click', () => {
 
 // Shot button event listener
 hitShotButton.addEventListener('click', () => {
+    console.log('Hit Shot button clicked!', { currentFlow, currentStateIndex });
     if (currentFlow === 'ShotState' && currentStateIndex === 0) {
+        console.log('Triggering shot detection');
         // Trigger shot detection
         shotDetected = true;
         shotDetectionTime = Date.now();
@@ -2842,6 +2861,8 @@ hitShotButton.addEventListener('click', () => {
             hitShotButton.disabled = false;
             hitShotButton.textContent = 'Hit Shot';
         }, 2000);
+    } else {
+        console.log('Shot button clicked but not in correct state', { currentFlow, currentStateIndex });
     }
 });
 
