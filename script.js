@@ -261,127 +261,31 @@ const flows = {
         },
         {
             title: "On",
-            explanation: "Device is powered on. It is automatically searching for a connection. (Additional option found in connection flow)",
+            explanation: "Device is powered on and ready to use.",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 
-                // Calculate transition progress
-                const transitionStart = 540; // When connection is established
-                const transitionDuration = 30; // 1 second transition
-                const transitionProgress = Math.min(1, Math.max(0, (frame - transitionStart) / transitionDuration));
-                
-                // Draw battery (always in tray position)
+                // Draw battery in tray position
                 drawBattery(ctx, 85);
                 
-                // Draw WiFi status with minimizing animation
-                if (connectionState === 'connected' && transitionProgress < 1) {
-                    // Calculate positions for minimizing animation
-                    const startSize = 30;
-                    const endSize = TRAY_POSITION.size;
-                    
-                    // Center positions (accounting for size)
-                    const startX = 80 - startSize/2;  // Center of screen
-                    const startY = 40 - startSize/2;  // Center of screen
-                    const endX = TRAY_POSITION.x - endSize/2;     // Tray position
-                    const endY = TRAY_POSITION.y - endSize/2;     // Tray position
-                    
-                    // Interpolate position and size
-                    const currentSize = startSize + (endSize - startSize) * transitionProgress;
-                    const currentX = startX + (endX - startX) * transitionProgress;
-                    const currentY = startY + (endY - startY) * transitionProgress;
-                    
-                    // Draw the minimizing animation
-                    ctx.save();
-                    ctx.translate(currentX, currentY);
-                    ctx.scale(currentSize/startSize, currentSize/startSize);
-                    
-                    // Draw the connected symbol
-                    ctx.beginPath();
-                    ctx.arc(startSize/2, startSize/2, startSize/2, 0, Math.PI * 2);
-                    ctx.strokeStyle = '#00ff00';
-                    ctx.lineWidth = 2 * (startSize/currentSize);
-                    ctx.stroke();
-                    
-                    // Draw check mark
-                    ctx.beginPath();
-                    ctx.moveTo(startSize/3, startSize/2);
-                    ctx.lineTo(startSize/2, startSize * 2/3);
-                    ctx.lineTo(startSize * 2/3, startSize/3);
-                    ctx.stroke();
-                    ctx.restore();
-                } else {
-                    // Draw appropriate version based on state
-                    const isFullHeight = connectionState !== 'connected';
-                    drawWifiStatus(ctx, connectionState, frame, isFullHeight);
-                }
-
-                // Draw subtle status text
-                ctx.globalAlpha = 0.5;
-                ctx.fillStyle = '#fff'; // White text
-                ctx.font = '10px monospace';
-                ctx.textAlign = 'left';
-                
-                if (connectionState !== 'connected' || transitionProgress < 1) {
-                    // Full height mode text
-                    const textOpacity = connectionState === 'connected' ? 1 - transitionProgress : 0.4;
-                    ctx.globalAlpha = textOpacity;
-                    
-                    switch(connectionState) {
-                        case 'searching':
-                            ctx.fillText('Searching', 10, 15);
-                            break;
-                        case 'connecting':
-                            ctx.fillText('Connecting', 10, 15);
-                            break;
-                        case 'connected':
-                            ctx.fillText('Connected', 10, 15);
-                            break;
-                    }
-                } else {
-                    // Tray mode text (when connected)
-                    ctx.fillText('Connected', 10, 15);
-                }
-                ctx.globalAlpha = 1;
+                // Draw WiFi in tray position (connected state)
+                drawWifiStatus(ctx, 'connected', frame, false, TRAY_POSITION.x, TRAY_POSITION.y, TRAY_POSITION.size);
             },
-            led: { state: 'breathing', color: 'blue' },
+            led: { state: 'on', color: 'red' },
             onEnter: () => {
                 let frame = 0;
-                connectionState = 'searching';
-                
                 const animate = () => {
                     const currentStates = flows[currentFlow];
                     const currentState = currentStates[currentStateIndex];
                     if (currentState.title === "On") {
                         currentState.draw(ctx, frame++);
                         
-                        // Update LED state based on connection state and frame
-                        if (connectionState === 'searching' || connectionState === 'connecting') {
-                            currentState.led = { state: 'breathing', color: 'blue' };
-                        } else if (connectionState === 'connected') {
-                            if (frame >= 640) { // Wait for transition to complete
-                                // Transition to Fully On state
-                                currentStateIndex = 3; // Move to Fully On state
-                                updateDisplay();
-                                return;
-                            } else {
-                                currentState.led = { state: 'on', color: 'green' };
-                            }
-                        }
-                        
-                        // Update the LED display
-                        ledLight.className = 'led-light';
-                        ledLight.classList.add(currentState.led.state);
-                        ledLight.classList.add(currentState.led.color);
-                        if (currentState.led.state === 'on') {
-                            ledLight.classList.add('on');
-                        }
-                        
-                        // Simulate connection process
-                        if (frame === 200) { // After 2 seconds
-                            connectionState = 'connecting';
-                        } else if (frame === 540) { // After 4 seconds
-                            connectionState = 'connected';
+                        // After 1 second, move to Fully On state
+                        if (frame >= 1) { // 1 second at 60fps
+                            currentStateIndex = 3; // Move to Fully On state
+                            updateDisplay();
+                            return;
                         }
                         
                         requestAnimationFrame(animate);
@@ -397,10 +301,13 @@ const flows = {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 
-                drawBattery(ctx, 85);
-                drawWifiStatus(ctx, 'connected', frame);
+                // Draw battery widget in top right
+                drawBattery(ctx, 75);
+                
+                // Draw all connection bars at minimal height (2px)
+                drawSignalBars(ctx, -1);
             },
-            led: { state: 'on', color: 'green' }
+            led: { state: 'on', color: 'red' }
         },
         {
             title: "Shutdown",
@@ -419,6 +326,7 @@ const flows = {
                 }
                 
                 drawBattery(ctx, 85);
+                drawSignalBars(ctx, -1);
                 // Only draw the vertical line without the bouncing arrow
                 const x = 140;  // Position from right
                 const y = 40;   // Center vertically
@@ -432,7 +340,7 @@ const flows = {
                 ctx.lineTo(x + 5, y + lineHeight/2);
                 ctx.stroke();
             },
-            led: { state: 'on', color: 'white' },
+            led: { state: 'on', color: 'red' },
             onEnter: () => {
                 let frame = 0;
                 let gifContainer = null;
@@ -543,12 +451,7 @@ const flows = {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 
-                // Draw text with fading opacity
-                ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText('Device', 80, 30);
-                ctx.fillText('Powered Off', 80, 50);
+                
             },
             led: { state: 'off', color: 'none' },
             onEnter: () => {
@@ -666,7 +569,7 @@ const flows = {
             }
         }
     ],
-    binding: [
+    linking: [
         {
             title: "Linking Ready",
             explanation: "Device is ready to be linked to your account.",
@@ -674,39 +577,14 @@ const flows = {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
 
-                // Calculate QR height if loaded, else estimate a default height
-                let qrHeight = 0;
-                if (microQRImgLoaded) {
-                    const lcdWidth = 160;
-                    const drawWidth = lcdWidth;
-                    const scale = drawWidth / microQRImg.width;
-                    qrHeight = microQRImg.height * scale;
-                } else {
-                    // Estimate a default QR height (e.g., 40px) if not loaded
-                    qrHeight = 40;
-                }
+                // Draw serial number centered
                 const serial = '124_DS';
-                const availableHeight = 70 - qrHeight;
-                let fontSize = Math.floor(availableHeight * 0.6);
-                if (fontSize < 16) fontSize = 16;
-                fontSize = Math.floor(fontSize * 1.2); // Increase by 20%
                 ctx.fillStyle = '#fff';
-                ctx.font = `${fontSize}px Barlow`;
+                ctx.font = '24px Barlow';
                 ctx.fontWeight = '500';
                 ctx.textAlign = 'center';
-                const textY = Math.floor((availableHeight + fontSize) / 2) - 0;
-                ctx.fillText(serial, 80, textY);
-
-                // Draw Micro QR.png pinned to the bottom, full width, if loaded
-                if (microQRImgLoaded) {
-                    const lcdWidth = 160;
-                    const drawWidth = lcdWidth;
-                    const scale = drawWidth / microQRImg.width;
-                    const drawHeight = microQRImg.height * scale;
-                    const x = 0;
-                    const y = 80 - drawHeight;
-                    ctx.drawImage(microQRImg, x, y, drawWidth, drawHeight);
-                }
+                ctx.fillText(serial, 80, 45);
+                drawBattery(ctx, 85);
             },
             led: { state: 'breathing', color: 'yellow' },
             onEnter: () => {
@@ -721,6 +599,7 @@ const flows = {
                     }
                 };
                 animate();
+                
             }
         },
         {
@@ -813,7 +692,6 @@ const flows = {
         {
             title: "Linking Complete",
             explanation: "Device has been successfully linked to your account.",
-            referenceImage: "Assets/ScreenCaps/🟢 Conection/ConnectingDirect.jpg",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -845,6 +723,7 @@ const flows = {
         {
             title: "Firmware Update, connect charger",
             explanation: "Connect charger before starting firmware update. Once charger is connected we can remove the warnings",
+            referenceImage: "Assets/ScreenCaps/🟢 Conection/Firware Update information.jpeg",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -935,6 +814,7 @@ const flows = {
                 
                 // No cable animation in this step
                 updateCableVisibility(false);
+                drawBattery(ctx, 40);
             },
             led: { state: 'breathing', color: 'yellow' },
             onEnter: () => {
@@ -1108,7 +988,7 @@ const flows = {
                     ctx.font = '15px Barlow';
                     ctx.fontWeight = '300';
                     ctx.textAlign = 'center';
-                    ctx.fillText('Firmware 1.43', 80, 45);
+                    ctx.fillText('Firmware 1.3.0', 80, 45);
 
                     ctx.fillStyle = '#fff';
                     ctx.font = '20px Barlow';
@@ -1116,6 +996,7 @@ const flows = {
                     ctx.textAlign = 'center';
                     ctx.fillText('Ready', 80, 66);
                 }
+             
             },
             led: { state: 'breathing', color: 'yellow' },
             onEnter: () => {
@@ -1134,16 +1015,26 @@ const flows = {
         {
             title: "Updating",
             explanation: "Firmware update in progress",
+            referenceImage: "Assets/ScreenCaps/🟢 Conection/Firmware Update.png",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 
-                // Draw text at the top
+                // Draw text at the top with breathing animation
                 ctx.fillStyle = '#fff';
                 ctx.font = '15px Barlow';
                 ctx.fontWeight = '300';
                 ctx.textAlign = 'center';
-                ctx.fillText('Fw 1.43', 80, 25);
+                
+                // Breathing animation for the firmware text - synced with LED (2 second cycle)
+                const breathingCycle = 120; // 2 seconds at 60fps to match LED breathing
+                const breathingPhase = (frame % breathingCycle) / breathingCycle;
+                // Match LED keyframes: 0.3 at 0%/100%, 1.0 at 50%
+                const breathingOpacity = 0.3 + 0.7 * Math.sin(breathingPhase * Math.PI);
+                
+                ctx.globalAlpha = breathingOpacity;
+                ctx.fillText('Fw 1.3.0', 80, 25);
+                ctx.globalAlpha = 1.0; // Reset alpha
                 
                 // Calculate progress and time
                 const totalDuration = 30; // 30 seconds total
@@ -1151,10 +1042,7 @@ const flows = {
                 const progress = Math.min(1, elapsedTime / totalDuration);
                 updateProgress = progress; // Update global progress
                 
-                // Calculate remaining time
-                const remainingTime = Math.max(0, totalDuration - elapsedTime);
-                const minutes = Math.floor(remainingTime / 60);
-                const seconds = Math.floor(remainingTime % 60);
+                // Countdown timer removed - breathing animation shows progress instead
                 
                 // Draw progress bar in the middle (full width)
                 const barWidth = 140; // Increased width
@@ -1196,15 +1084,7 @@ const flows = {
                     ctx.fill();
                 }
                 
-                // Draw "Remaining:" text at bottom left
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'left';
-                ctx.fillStyle = '#fff';
-                ctx.fillText('Remaining:', 10, 75);
-                
-                // Draw countdown at bottom right
-                ctx.textAlign = 'right';
-                ctx.fillText(`${minutes}:${seconds.toString().padStart(2, '0')}`, 150, 75);
+                // Countdown timer display removed
                 
               // Draw empty battery
               drawBattery(ctx, 0);
@@ -1295,6 +1175,7 @@ const flows = {
         {
             title: "Update Complete",
             explanation: "Firmware update completed successfully.",
+            referenceImage: "Assets/ScreenCaps/🟢 Conection/Device Registered.jpg",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -1800,96 +1681,25 @@ const flows = {
     ],
     'cable charging': [
         {
-            title: "Connect cable",
-            explanation: "Cable is being plugged into the device.",
+            title: "Charging",
+            explanation: "Device is charging via cable. White LED indicates charging status.",
             draw: (ctx, frame) => {
-                // Start with blank screen
-                ctx.fillStyle = '#111';
+                // Empty screen - no LCD interaction
+                ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
-                
-                // Calculate animation phases
-                const cableAnimationDuration = 30; // 0.5 seconds for cable animation
-                const indicatorDelay = 2; // Short delay before showing indicators
-                const holdDuration = 60; // 1 second hold after indicators appear
-                
-                // Get the cable element
-                const cableElement = document.getElementById('cable');
-                if (cableElement) {
-                    if (frame === 0) {
-                        // Initial state - cable off screen
-                        cableElement.style.display = 'block';
-                        cableElement.style.transition = 'transform 0.5s ease-out';
-                        cableElement.style.transform = 'translateX(-100px)';
-                        // Trigger reflow
-                        cableElement.offsetHeight;
-                        // Animate cable in
-                        cableElement.style.transform = 'translateX(0)';
-                    }
-                }
-                
-                // Only show charging indicators after cable animation
-                if (frame >= cableAnimationDuration + indicatorDelay) {
-                    // Draw charging indicator on the left
-                    const indicatorWidth = 4;
-                    const indicatorHeight = 45;
-                    const indicatorX = 0;
-                    const indicatorY = 17;
-                    
-                    // Draw vertical rectangle
-                    ctx.fillStyle = '#fff';
-                    ctx.fillRect(indicatorX, indicatorY, indicatorWidth, indicatorHeight);
-                    
-                    // Lightning bolt configuration
-                    const boltConfig = {
-                        x: indicatorX + 10,
-                        y: indicatorY + 10,
-                        width: 14,
-                        height: 22,
-                        thickness: 1,
-                        angle: 0,
-                        color: '#fff'
-                    };
-                    
-                    // Draw lightning bolt
-                    ctx.save();
-                    ctx.fillStyle = boltConfig.color;
-                    ctx.translate(boltConfig.x, boltConfig.y);
-                    ctx.rotate(boltConfig.angle * Math.PI / 180);
-                    
-                    const w = boltConfig.width;
-                    const h = boltConfig.height;
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(w * 0.794, 0);
-                    ctx.lineTo(w * 0.308, 0);
-                    ctx.lineTo(0, h * 0.526);
-                    ctx.lineTo(w * 0.481, h * 0.526);
-                    ctx.lineTo(w * 0.264, h);
-                    ctx.lineTo(w, h * 0.383);
-                    ctx.lineTo(w * 0.481, h * 0.383);
-                    ctx.lineTo(w * 0.794, 0);
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.restore();
-                  
-                   
-                }
             },
-            led: { state: 'off', color: 'none' },
+            led: { state: 'breathing', color: 'white' },
             onEnter: () => {
                 let frame = 0;
                 const animate = () => {
                     const currentStates = flows[currentFlow];
                     const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Connect cable") {
+                    if (currentState.title === "Charging") {
                         currentState.draw(ctx, frame++);
                         
-                        // Move to next state after cable animation, indicators, and hold duration
-                        const cableAnimationDuration = 30; // 0.5 seconds
-                        const indicatorDelay = 2; // Short delay
-                        const holdDuration = 60; // 1 second hold
-                        if (frame >= cableAnimationDuration + indicatorDelay + holdDuration) {
-                            currentStateIndex = 1; // Move to Animated Battery 2 state
+                        // Simulate charging completion after 20 seconds
+                        if (frame >= 1200) { // 20 seconds at 60fps
+                            currentStateIndex = 1; // Move to Charging Complete state
                             updateDisplay();
                             return;
                         }
@@ -1901,80 +1711,12 @@ const flows = {
             }
         },
         {
-            title: "Animated Battery 2",
-            explanation: "A large battery animating a charging sequence.",
+            title: "Charging Complete",
+            explanation: "Charging is complete. LED turns off.",
             draw: (ctx, frame) => {
-                ctx.fillStyle = '#111';
+                // Empty screen - no LCD interaction
+                ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
-                
-                // Calculate if battery is fully charged
-                const cycle = 2000;
-                const percent = ((frame % cycle) / (cycle - 1)) * 100;
-                const isFullyCharged = percent >= 99.5; // Consider fully charged at 99.5% or higher
-                
-                // Only draw charging indicator and lightning bolt if not fully charged
-                if (!isFullyCharged) {
-                    // Draw charging indicator on the left
-                    const indicatorWidth = 4;
-                    const indicatorHeight = 45;
-                    const indicatorX = 0;
-                    const indicatorY = 17;
-                    
-                    // Draw vertical rectangle
-                    ctx.fillStyle = '#fff';
-                    ctx.fillRect(indicatorX, indicatorY, indicatorWidth, indicatorHeight);
-                    
-                    // Calculate pulse effect for lightning bolt
-                    const pulseIntensity = 0.4;
-                    const pulseSpeed = 0.1;
-                    const pulseOffset = Math.sin(frame * pulseSpeed) * pulseIntensity;
-                    const boltOpacity = 0.7 + pulseOffset;
-                    
-                    // Lightning bolt configuration
-                    const boltConfig = {
-                        x: indicatorX + 10,
-                        y: indicatorY + 10,
-                        width: 14,
-                        height: 22,
-                        thickness: 1,
-                        angle: 0,
-                        color: `rgba(255, 255, 255, ${boltOpacity})`
-                    };
-                    
-                    // Draw lightning bolt
-                    ctx.save();
-                    ctx.fillStyle = boltConfig.color;
-                    ctx.translate(boltConfig.x, boltConfig.y);
-                    ctx.rotate(boltConfig.angle * Math.PI / 180);
-                    
-                    const w = boltConfig.width;
-                    const h = boltConfig.height;
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(w * 0.794, 0);
-                    ctx.lineTo(w * 0.308, 0);
-                    ctx.lineTo(0, h * 0.526);
-                    ctx.lineTo(w * 0.481, h * 0.526);
-                    ctx.lineTo(w * 0.264, h);
-                    ctx.lineTo(w, h * 0.383);
-                    ctx.lineTo(w * 0.481, h * 0.383);
-                    ctx.lineTo(w * 0.794, 0);
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.restore();
-                }
-                
-                // Draw battery with custom options
-                drawAnimatedBattery(ctx, frame, {
-                    x: isFullyCharged ? 32 : 49,  // Adjust position when fully charged
-                    y: 23,  // Vertically centered
-                    width: isFullyCharged ? 90 : 62,  // Full width when charged
-                    height: 34,
-                    radius: 7,
-                    showPercentage: true,
-                    percentageY: 45,  // Inside battery
-                    shimmer: false
-                });
             },
             led: { state: 'off', color: 'none' },
             onEnter: () => {
@@ -1982,159 +1724,9 @@ const flows = {
                 const animate = () => {
                     const currentStates = flows[currentFlow];
                     const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Animated Battery 2") {
-                        currentState.draw(ctx, frame++);
-                        
-                        // Check if battery is fully charged and advance to next state
-                        const cycle = 2000;
-                        const percent = ((frame % cycle) / (cycle - 1)) * 100;
-                        if (percent >= 99.5) {
-                            currentStateIndex = 3; // Move to Battery Fully Charged state (index 2)
-                            updateDisplay();
-                            return;
-                        }
-                        
-                        requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Battery Fully Charged",
-            explanation: "Battery fully charged at 100% whilst still plugged in.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#111';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Draw charging indicator on the left
-                const indicatorWidth = 4;
-                const indicatorHeight = 45;
-                const indicatorX = 0;
-                const indicatorY = 17;
-                
-                // Draw vertical rectangle
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(indicatorX, indicatorY, indicatorWidth, indicatorHeight);
-                
-                // Calculate lightning bolt opacity (fade out over 1 second = 60 frames)
-                const fadeDuration = 60;
-                const boltOpacity = Math.max(0, 1 - (frame / fadeDuration));
-                
-                // Lightning bolt configuration
-                const boltConfig = {
-                    x: indicatorX + 10,
-                    y: indicatorY + 10,
-                    width: 14,
-                    height: 22,
-                    thickness: 1,
-                    angle: 0,
-                    color: `rgba(255, 255, 255, ${boltOpacity})`
-                };
-                
-                // Draw lightning bolt with fade
-                ctx.save();
-                ctx.fillStyle = boltConfig.color;
-                ctx.translate(boltConfig.x, boltConfig.y);
-                ctx.rotate(boltConfig.angle * Math.PI / 180);
-                
-                const w = boltConfig.width;
-                const h = boltConfig.height;
-                
-                ctx.beginPath();
-                ctx.moveTo(w * 0.794, 0);
-                ctx.lineTo(w * 0.308, 0);
-                ctx.lineTo(0, h * 0.526);
-                ctx.lineTo(w * 0.481, h * 0.526);
-                ctx.lineTo(w * 0.264, h);
-                ctx.lineTo(w, h * 0.383);
-                ctx.lineTo(w * 0.481, h * 0.383);
-                ctx.lineTo(w * 0.794, 0);
-                ctx.closePath();
-                ctx.fill();
-                ctx.restore();
-                
-                // Draw battery at 100%
-                drawAnimatedBattery(ctx, 0, {
-                    x: 49,  // Keep same position as charging state
-                    y: 23,
-                    width: 62,  // Keep same width as charging state
-                    height: 34,
-                    radius: 7,
-                    showPercentage: true,
-                    percentageY: 45,
-                    shimmer: false,
-                    forcePercent: 100  // Force 100% display
-                });
-            },
-            led: { state: 'off', color: 'none' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Battery Fully Charged") {
+                    if (currentState.title === "Charging Complete") {
                         currentState.draw(ctx, frame++);
                         requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Cable Disconnect",
-            explanation: "Cable is unplugged and battery indicator persists before turning off.",
-            draw: (ctx, frame) => {
-                ctx.fillStyle = '#111';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Calculate animation phases
-                const batteryPersistDuration = 100; // 5 seconds for battery persistence
-                const batteryFadeDuration = 30; // 0.5 seconds for battery fade out
-                
-                // Calculate battery opacity (fade out at the end)
-                const batteryOpacity = frame < batteryPersistDuration ? 1 :
-                    frame < batteryPersistDuration + batteryFadeDuration ?
-                    1 - ((frame - batteryPersistDuration) / batteryFadeDuration) : 0;
-                
-                // Draw battery at 100% with fade out
-                if (batteryOpacity > 0) {
-                    ctx.globalAlpha = batteryOpacity;
-                    drawAnimatedBattery(ctx, 0, {
-                        x: 49,
-                        y: 23,
-                        width: 62,
-                        height: 34,
-                        radius: 7,
-                        showPercentage: true,
-                        percentageY: 45,
-                        shimmer: false,
-                        forcePercent: 100
-                    });
-                    ctx.globalAlpha = 1;
-                }
-            },
-            led: { state: 'off', color: 'none' },
-            onEnter: () => {
-                let frame = 0;
-                
-                // Get the cable element
-                const cableElement = document.getElementById('cable');
-                if (cableElement) {
-                    // Add animation class
-                    cableElement.style.transition = 'transform 0.5s ease-out, opacity 0.5s ease-out';
-                    cableElement.style.transform = 'translateX(-100px)';
-                    cableElement.style.opacity = '0';
-                }
-                
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Cable Disconnect") {
-                        currentState.draw(ctx, frame++);
-                        if (frame < 330) { // Continue for 5.5 seconds (5s persist + 0.5s fade)
-                            requestAnimationFrame(animate);
-                        }
                     }
                 };
                 animate();
@@ -2144,7 +1736,8 @@ const flows = {
     levelling: [
         {
             title: "Attitude Indicator v4",
-            explanation: "Device orientation: graphically show the accelerometer data in an intuitive way to enhance and facilitate levelling outside of the app",
+            explanation: "Device orientation: graphically show the accelerometer data in an intuitive way to enhance and facilitate levelling outside of the app. If disconnected during this state, the device will show error message and then waiting for connection.",
+            referenceImage: "Assets/ScreenCaps/Gameplay/Summary.jpg",
             draw: (ctx, frame) => {
                 // Clear the canvas
                 ctx.fillStyle = '#000';
@@ -2190,6 +1783,8 @@ const flows = {
                 ctx.moveTo(80, 30);
                 ctx.lineTo(80, 50);
                 ctx.stroke();
+
+                drawBattery(ctx, 75);
             },
             led: { state: 'on', color: 'green' },
             onEnter: () => {
@@ -2202,151 +1797,7 @@ const flows = {
                         const isLevel = Math.abs(rollDegrees) <= 1 && Math.abs(pitchDegrees) <= 1;
                         currentState.led = isLevel ? 
                             { state: 'on', color: 'green' } : 
-                            { state: 'blink', color: 'green' };
-                            
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Attitude Indicator v2",
-            explanation: "Device orientation: graphically show the accelerometer data in an intuitive way to enhance and facilitate levelling outside of the app",
-            draw: (ctx, frame) => {
-                // Clear the canvas
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Save the context state
-                ctx.save();
-                
-                // Move to center and rotate for roll
-                const centerX = 80;
-                const centerY = 40;
-                ctx.translate(centerX, centerY);
-                ctx.rotate((rollDegrees * rollExaggerationFactor) * Math.PI / 180);  // Use global roll exaggeration
-                
-                // Draw extended sky (blue) - make it larger than the LCD
-                ctx.fillStyle = '#1E90FF';
-                ctx.fillRect(-200, -200, 400, 400);
-                
-                // Draw extended ground (brown) - make it larger than the LCD
-                ctx.fillStyle = '#8B4513';
-                ctx.fillRect(-200, 0, 400, 400);
-                
-                // Determine if we're within 1 degree margin (using original values for level check)
-                const isLevel = Math.abs(rollDegrees) <= 1 && Math.abs(pitchDegrees) <= 1;
-                
-                // Draw the horizon line with color based on level status
-                ctx.strokeStyle = isLevel ? '#00FF00' : '#FF0000';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.moveTo(-200, pitchDegrees * pitchExaggerationFactor);  // Use global pitch exaggeration
-                ctx.lineTo(200, pitchDegrees * pitchExaggerationFactor);
-                ctx.stroke();
-                
-                // Draw the center marker in white
-                ctx.strokeStyle = '#FFFFFF';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(-10, pitchDegrees * pitchExaggerationFactor);  // Use global pitch exaggeration
-                ctx.lineTo(10, pitchDegrees * pitchExaggerationFactor);
-                ctx.moveTo(0, (pitchDegrees * pitchExaggerationFactor) - 10);
-                ctx.lineTo(0, (pitchDegrees * pitchExaggerationFactor) + 10);
-                ctx.stroke();
-                
-                // Restore the context
-                ctx.restore();
-                
-                // Draw the degree values
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = '12px monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText(`${Math.round(rollDegrees)}°`, 80, 15);  // Roll at top
-                ctx.textAlign = 'left';
-                ctx.fillText(`${Math.round(pitchDegrees)}°`, 130, 40);  // Pitch on right
-            },
-            led: { state: 'on', color: 'green' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Attitude Indicator v2") {
-                        // Update LED state based on level status
-                        const isLevel = Math.abs(rollDegrees) <= 1 && Math.abs(pitchDegrees) <= 1;
-                        currentState.led = isLevel ? 
-                            { state: 'on', color: 'green' } : 
-                            { state: 'blink', color: 'green' };
-                            
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "Attitude Indicator v3",
-            explanation: "Device orientation: graphically show the accelerometer data in an intuitive way to enhance and facilitate levelling outside of the app",
-            draw: (ctx, frame) => {
-                // Clear the canvas
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-                
-                // Save the context state
-                ctx.save();
-                
-                // Move to center and rotate for roll
-                const centerX = 80;
-                const centerY = 40;
-                ctx.translate(centerX, centerY);
-                ctx.rotate((rollDegrees * rollExaggerationFactor) * Math.PI / 180);  // Use global roll exaggeration
-                
-                // Draw extended sky (black) - make it larger than the LCD
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(-200, -200, 400, 400);
-                
-                // Draw extended ground (white) - make it larger than the LCD
-                ctx.fillStyle = '#FFFFFF';
-                ctx.fillRect(-200, pitchDegrees * pitchExaggerationFactor, 400, 400);  // Move the ground with pitch
-                
-                // Restore the context
-                ctx.restore();
-                
-                // Draw the fixed horizon line with color based on level status
-                const isLevel = Math.abs(rollDegrees) <= 1 && Math.abs(pitchDegrees) <= 1;
-                ctx.strokeStyle = isLevel ? '#00FF00' : '#FF0000';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.moveTo(0, 40);  // Fixed at center
-                ctx.lineTo(160, 40);
-                ctx.stroke();
-                
-                // Draw the fixed center marker in white
-                ctx.strokeStyle = '#FFFFFF';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(70, 40);  // Fixed at center
-                ctx.lineTo(90, 40);
-                ctx.moveTo(80, 30);
-                ctx.lineTo(80, 50);
-                ctx.stroke();
-            },
-            led: { state: 'on', color: 'green' },
-            onEnter: () => {
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Attitude Indicator v3") {
-                        // Update LED state based on level status
-                        const isLevel = Math.abs(rollDegrees) <= 1 && Math.abs(pitchDegrees) <= 1;
-                        currentState.led = isLevel ? 
-                            { state: 'on', color: 'green' } : 
-                            { state: 'blink', color: 'green' };
+                            { state: 'blink', color: 'red' };
                             
                         currentState.draw(ctx, frame++);
                         requestAnimationFrame(animate);
@@ -2356,11 +1807,13 @@ const flows = {
             }
         },
        
+       
     ],
     ShotState: [
         {
             title: "White ready sequence",
-            explanation: "A white loading animation that indicates processing or loading state.",
+            explanation: "Typical shot state pattern. Balls can only be detected when the ready is shown and the LED turns green.",
+            referenceImage: "Assets/ScreenCaps/🟢 Gameplay/Gameplay/WhilePlaying.png",
             draw: (ctx, frame) => {
                 // Clear the canvas
                 ctx.fillStyle = '#000';
@@ -2370,17 +1823,17 @@ const flows = {
                 drawBattery(ctx, 85);
                 drawWifiStatus(ctx, 'connected', frame, false);
             },
-            led: { state: 'breathing', color: 'red' }, // Initial LED state is always white breathing
+            led: { state: 'on', color: 'red' }, // Initial LED state is always white breathing
             onEnter: () => {
                 // Reset LED state to white breathing immediately
                 ledLight.className = 'led-light';
-                ledLight.classList.add('breathing');
+                ledLight.classList.add('on');
                 ledLight.classList.add('red');
                 
                 // Explicitly set the LED state in the current state
                 const currentStates = flows[currentFlow];
                 const currentState = currentStates[currentStateIndex];
-                currentState.led = { state: 'breathing', color: 'red' };
+                currentState.led = { state: 'on', color: 'red' };
                 
                 // Create a container for the GIF/PNG
                 const gifContainer = document.createElement('div');
@@ -2406,6 +1859,9 @@ const flows = {
                 let frame = 0;
                 let sequenceStage = 0; // 0: Loading, 1: Ready animation, 2: Ready static
                 let startTime = Date.now();
+                
+                // Store start time in current state for button logic
+                currentState.startTime = startTime;
                 
                 const animate = () => {
                     const currentStates = flows[currentFlow];
@@ -2436,6 +1892,29 @@ const flows = {
                             ledLight.classList.add('green');
                         }
                         
+                        // Check for shot detection when in ready state (sequenceStage 2)
+                        if (sequenceStage === 2 && shotDetected && (Date.now() - shotDetectionTime) < 1000) {
+                            // Shot detected! Show shot detection feedback
+                            img.src = 'Assets/Ready.gif'; // Flash back to animated ready
+                            currentState.led = { state: 'blink', color: 'green' };
+                            ledLight.className = 'led-light';
+                            ledLight.classList.add('blink');
+                            ledLight.classList.add('green');
+                            
+                            // Reset shot detection and restart sequence after showing feedback
+                            setTimeout(() => {
+                                shotDetected = false;
+                                // Restart the entire shot sequence
+                                startTime = Date.now();
+                                sequenceStage = 0;
+                                img.src = 'Assets/White_Loading.gif';
+                                currentState.led = { state: 'on', color: 'red' };
+                                ledLight.className = 'led-light';
+                                ledLight.classList.add('on');
+                                ledLight.classList.add('red');
+                            }, 500);
+                        }
+                        
                         currentState.draw(ctx, frame++);
                         requestAnimationFrame(animate);
                     } else {
@@ -2457,109 +1936,16 @@ const flows = {
                 };
             }
         },
-        {
-            title: "Blue Loading Animation",
-            explanation: "A blue loading animation test which indicates processing or loading state. Unlikely to be used in production.",
-            draw: (ctx, frame) => {
-                // Clear the canvas
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-
-                // Draw battery and WiFi
-                drawBattery(ctx, 85);
-                drawWifiStatus(ctx, 'connected', frame, false);
-            },
-            led: { state: 'breathing', color: 'blue' },
-            onEnter: () => {
-                // Create a container for the GIF
-                const gifContainer = document.createElement('div');
-                gifContainer.style.position = 'absolute';
-                gifContainer.style.top = canvas.offsetTop + 'px';
-                gifContainer.style.left = (canvas.offsetLeft + 5) + 'px';  // Move 5px right
-                gifContainer.style.width = canvas.width + 'px';
-                gifContainer.style.height = canvas.height + 'px';
-                gifContainer.style.zIndex = '0';  // Set to background
-                canvas.parentNode.appendChild(gifContainer);
-
-                // Create and load the image
-                const img = document.createElement('img');
-                img.src = 'Assets/Blue_Loading.gif';
-                img.style.width = '100%';
-                img.style.height = '100%';
-                img.style.objectFit = 'cover';
-                gifContainer.appendChild(img);
-
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "Blue Loading Animation") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    } else {
-                        // Cleanup when switching away
-                        if (gifContainer.parentNode) {
-                            gifContainer.parentNode.removeChild(gifContainer);
-                        }
-                    }
-                };
-                animate();
-            }
-        },
-        {
-            title: "White Loading Animation",
-            explanation: "A white loading animation that indicates processing or loading state. Clearer and less distracting. Bouce is used in the animation to give a more dynamic feel.",
-            draw: (ctx, frame) => {
-                // Clear the canvas
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, 160, 80);
-
-                // Draw battery and WiFi
-                drawBattery(ctx, 85);
-                drawWifiStatus(ctx, 'connected', frame, false);
-            },
-            led: { state: 'breathing', color: 'white' },
-            onEnter: () => {
-                // Create a container for the GIF
-                const gifContainer = document.createElement('div');
-                gifContainer.style.position = 'absolute';
-                gifContainer.style.top = 30 + 'px';
-                gifContainer.style.left = 25 + 'px';  // Move 5px right
-                gifContainer.style.width = canvas.width*0.8 + 'px';
-                gifContainer.style.height = canvas.height*0.8 + 'px';
-                gifContainer.style.zIndex = '0';  // Set to background
-                canvas.parentNode.appendChild(gifContainer);
-
-                // Create and load the image
-                const img = document.createElement('img');
-                img.src = 'Assets/White_Loading.gif';
-                img.style.width = '100%';
-                img.style.height = '100%';
-                img.style.objectFit = 'cover';
-                gifContainer.appendChild(img);
-
-                let frame = 0;
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "White Loading Animation") {
-                        currentState.draw(ctx, frame++);
-                        requestAnimationFrame(animate);
-                    } else {
-                        // Cleanup when switching away
-                        if (gifContainer.parentNode) {
-                            gifContainer.parentNode.removeChild(gifContainer);
-                        }
-                    }
-                };
-                animate();
-            }
-        }
+      
+        
     ],
-    "Connection Animations": [
+    "Connection: Network": [
+        
         {
             title: "WiFi Search GIF",
-            explanation: "Searching for networks known networks.",
+            explanation: "Establishing bluetooth connection. Device being used to discover wifi networks.",
+            referenceImage: "Assets/ScreenCaps/🟢 Conection/ConnectingWifi.jpg",
+            // Used a animation by Esko Ahonen
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -2568,64 +1954,13 @@ const flows = {
             onEnter: () => {
                 let frame = 0;
                 
-               // Create a container for the GIF
-               const gifContainer = document.createElement('div');
-               gifContainer.style.position = 'absolute';
-               gifContainer.style.top = (canvas.offsetTop + 0) + 'px';  // Add 5px padding from top
-               gifContainer.style.left = canvas.offsetLeft + 'px';
-               gifContainer.style.width = canvas.width + 'px';
-               gifContainer.style.height = canvas.height + 'px';
-               gifContainer.style.zIndex = '10';
-               gifContainer.dataset.gifContainer = 'true';
-               canvas.parentNode.appendChild(gifContainer);
-
-               // Create and load the image
-               const img = document.createElement('img');
-               img.style.width = '80%';
-               img.style.height = '80%';
-               img.style.objectFit = 'contain';
-               img.style.position = 'absolute';
-               img.style.top = '38%';
-               img.style.left = '50%';
-               img.style.transform = 'translate(-50%, -50%)';
-               gifContainer.appendChild(img);
-                
-                // Force reload of GIF by adding timestamp
-                const timestamp = new Date().getTime();
-                img.src = `Assets/searching.gif?t=${timestamp}`;
-                
-                const animate = () => {
-                    const currentStates = flows[currentFlow];
-                    const currentState = currentStates[currentStateIndex];
-                    if (currentState.title === "WiFi Search GIF") {
-                        currentState.draw(ctx, frame++);
-                        if (frame >= 180) { // After 3 seconds, move to connecting state
-                            currentStateIndex = 1;
-                            updateDisplay();
-                        } else {
-                            requestAnimationFrame(animate);
-                        }
-                    } else {
-                        if (gifContainer.parentNode) {
-                            gifContainer.parentNode.removeChild(gifContainer);
-                        }
-                    }
-                };
-                
-                animate();
-                
-                return {
-                    destroy: () => {
-                        if (gifContainer.parentNode) {
-                            gifContainer.parentNode.removeChild(gifContainer);
-                        }
-                    }
-                };
+               
             }
         },
         {
             title: "WiFi Search GIF 2/3",
-            explanation: "Indicates that a known network is being connected to.",
+            explanation: "Selected wifi network is being connected to.",
+            referenceImage: "Assets/ScreenCaps/🟢 Conection/ConnectingWifi.jpg",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -2660,30 +1995,25 @@ const flows = {
 
                 // Create and load the image
                 const img = document.createElement('img');
-                img.style.width = '80%';
-                img.style.height = '80%';
+                img.style.width = '70%';
+                img.style.height = '70%';
                 img.style.objectFit = 'contain';
                 img.style.position = 'absolute';
-                img.style.top = '38%';
+                img.style.top = '30%';
                 img.style.left = '50%';
                 img.style.transform = 'translate(-50%, -50%)';
                 gifContainer.appendChild(img);
                 
                 // Force reload of GIF by adding timestamp
                 const timestamp = new Date().getTime();
-                img.src = `Assets/searching.gif?t=${timestamp}`;
+                img.src = `Assets/Wifi Connection.gif?t=${timestamp}`;
                 
                 const animate = () => {
                     const currentStates = flows[currentFlow];
                     const currentState = currentStates[currentStateIndex];
                     if (currentState.title === "WiFi Search GIF 2/3") {
                         currentState.draw(ctx, frame++);
-                        if (frame >= 300) { // After 3 seconds, move to connecting state
-                            currentStateIndex = 2;
-                            updateDisplay();
-                        } else {
                             requestAnimationFrame(animate);
-                        }
                     } else {
                         if (gifContainer.parentNode) {
                             gifContainer.parentNode.removeChild(gifContainer);
@@ -2705,7 +2035,7 @@ const flows = {
         {
             title: "Connection Success23",
             explanation: "successfully connected to the selected network",
-            referenceImage: "Assets/ScreenCaps/🟢 Conection/ConnectingWifi.jpg",
+            referenceImage: "Assets/ScreenCaps/🟢 Conection/Connection Tray.png",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -2721,12 +2051,7 @@ const flows = {
                            
                 
                 // Draw success animation
-                const shouldContinue = drawSuccessAnimationConnect(ctx, frame);
-                if (!shouldContinue) {
-                    // Move to next state after animation completes
-                    currentStateIndex = 3;
-                    updateDisplay();
-                }
+                drawSuccessAnimationConnect(ctx, frame);
             },
             led: { state: 'on', color: 'green' },
             onEnter: () => {
@@ -2745,6 +2070,7 @@ const flows = {
         {
             title: "Successfully connected to Home_32",
             explanation: "Persistent connection symbol in tray displays connection status and strength.",
+            referenceImage: "Assets/ScreenCaps/🟢 Conection/Connection strength.png",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -2779,7 +2105,7 @@ const flows = {
         },
         {
             title: "Medium Signal Strength",
-            explanation: "Connected with medium signal strength",
+            explanation: "Connected with medium signal strength. LED remains colour of device state (connection, shot state etc)",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -2794,7 +2120,7 @@ const flows = {
         },
         {
             title: "Low Signal Strength",
-            explanation: "Connected with low signal strength",
+            explanation: "Connected with low signal strength. LED remains colour of device state (connection, shot state etc)",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -2809,7 +2135,7 @@ const flows = {
         },
         {
             title: "Very Low Signal Strength",
-            explanation: "Connected with very low signal strength",
+            explanation: "Connected with very low signal strength. LED remains colour of device state (connection, shot state etc)",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -2824,7 +2150,7 @@ const flows = {
         },
         {
             title: "No Network Connection",
-            explanation: "Unit is not connected to any network",
+            explanation: "Unit is not connected to any network. This is same as default on without unit connected.",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
@@ -2838,18 +2164,291 @@ const flows = {
             led: { state: 'on', color: 'red' }
         }
     ],
+
+   "Connection: Access Point": [
+        
+        {
+            title: "WiFi Search GIF",
+            explanation: "Establishing bluetooth connection.",
+            referenceImage: "Assets/ScreenCaps/🟢 Conection/ConnectingWifi.jpg",
+            // Used a animation by Esko Ahonen
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                let frame = 0;
+                
+               
+            }
+        },
+        {
+            title: "WiFi Search GIF 2/3",
+            explanation: "MLMDS Directly connecting to phone/tablet.",
+            referenceImage: "Assets/ScreenCaps/🟢 Conection/ConnectingWifi.jpg",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+
+                // Draw network name with animated dots
+                ctx.fillStyle = '#fff';
+                ctx.font = '16px Barlow';
+                ctx.textAlign = 'center';
+                
+                // Draw fixed network name at bottom
+                ctx.fillText('Connecting', 80, 75);
+                
+                // Draw animated dots separately
+                const dots = '.'.repeat(Math.floor((frame % 60) / 20) + 1);
+                const dotsX = 95 + ctx.measureText('Home_32').width/2 + 2; // Position dots after the text
+                ctx.fillText(dots, dotsX, 75);
+            },
+            led: { state: 'breathing', color: 'blue' },
+            onEnter: () => {
+                let frame = 0;
+                
+                // Create a container for the GIF
+                const gifContainer = document.createElement('div');
+                gifContainer.style.position = 'absolute';
+                gifContainer.style.top = (canvas.offsetTop + 0) + 'px';  // Add 5px padding from top
+                gifContainer.style.left = canvas.offsetLeft + 'px';
+                gifContainer.style.width = canvas.width + 'px';
+                gifContainer.style.height = canvas.height + 'px';
+                gifContainer.style.zIndex = '10';
+                gifContainer.dataset.gifContainer = 'true';
+                canvas.parentNode.appendChild(gifContainer);
+
+                // Create and load the image
+                const img = document.createElement('img');
+                img.style.width = '70%';
+                img.style.height = '70%';
+                img.style.objectFit = 'contain';
+                img.style.position = 'absolute';
+                img.style.top = '30%';
+                img.style.left = '50%';
+                img.style.transform = 'translate(-50%, -50%)';
+                gifContainer.appendChild(img);
+
+                // Force reload of GIF by adding timestamp
+                const timestamp = new Date().getTime();
+                img.src = `Assets/AP Connection2.gif?t=${timestamp}`;
+                
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "WiFi Search GIF 2/3") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    } else {
+                        if (gifContainer.parentNode) {
+                            gifContainer.parentNode.removeChild(gifContainer);
+                        }
+                    }
+                };
+                
+                animate();
+                
+                return {
+                    destroy: () => {
+                        if (gifContainer.parentNode) {
+                            gifContainer.parentNode.removeChild(gifContainer);
+                        }
+                    }
+                };
+            }
+        },
+        {
+            title: "Connection Success23",
+            explanation: "successfully connected to the selected network",
+            referenceImage: "Assets/ScreenCaps/🟢 Conection/Connection Tray.png",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+
+                  // Draw network name with animated dots
+                  ctx.fillStyle = '#fff';
+                  ctx.font = '16px Barlow';
+                  ctx.textAlign = 'center';
+                  
+                  // Draw fixed network name at bottom
+                  ctx.fillText('', 80, 75);
+                  
+                           
+                
+                // Draw success animation
+                drawSuccessAnimationConnect(ctx, frame);
+            },
+            led: { state: 'on', color: 'green' },
+            onEnter: () => {
+                let frame = 0;
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Connection Success23") {
+                        currentState.draw(ctx, frame++);
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        },
+        {
+            title: "Successfully connected to Home_32",
+            explanation: "Persistent paired symbol in tray displays connection to phone.",
+            referenceImage: "Assets/ScreenCaps/🟢 Conection/Connection strength.png",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw battery widget in top right
+                drawBattery(ctx, 75);  // Show 75% battery level
+                
+                // Draw linked green symbol to the left of battery
+                const linkedImg = new Image();
+                linkedImg.src = 'Assets/Linked Green.png';
+                linkedImg.onload = () => {
+                    const x = 105;  // Position to the left of battery
+                    const y = 3;    // Same y as battery
+                    const width = 20;
+                    const height = 15;
+                    ctx.drawImage(linkedImg, x, y, width, height);
+                };
+            },
+            led: { state: 'on', color: 'green' }
+        },
+        {
+            title: "No Network Connection",
+            explanation: "Unit is not connected to any network. This is same as default on without unit connected.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw battery widget in top right
+                drawBattery(ctx, 75);
+                
+                // Draw all connection bars at minimal height (2px)
+                drawSignalBars(ctx, -1);
+            },
+            led: { state: 'on', color: 'red' }
+        }
+       
+    ],
+    
+    "first time": [
+        {
+            title: "Welcome Message",
+            explanation: "First time Default screen. Includes app download line QR code.",
+            draw: (ctx, frame) => {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 160, 80);
+                
+                // Draw battery widget in top right
+                drawBattery(ctx, 75);
+                
+                // Draw "Download:" text
+                ctx.fillStyle = '#fff';
+                ctx.font = '14px Barlow';
+                ctx.textAlign = 'left';
+                ctx.fillText('Get Started:', 0, 15);
+                
+                // Draw micro QR code
+                const qrImg = new Image();
+                qrImg.src = 'Assets/qr.svg';
+                qrImg.onload = () => {
+                    // Center the QR code below the text
+                    const qrSize = 160; // Size of the QR code
+                    const qrSizeY = 50; // Size of the QR code
+                    const x = (160 - qrSize) / 2; // Center horizontally
+                    const y = 30; // Position below the text
+                    ctx.drawImage(qrImg, x, y, qrSize, qrSizeY);
+                };
+            },
+            led: { state: 'on', color: 'red' }
+        }
+    ],
     
     "BatteryWidget": [
         {
             title: "Battery 0%",
-            explanation: "Battery completely empty",
+            explanation: "Battery completely empty. Blink red 10s before turning off.",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 
                 drawSVGBatteryWidget(ctx, 0);
             },
-            led: { state: 'breathing', color: 'red' }
+            led: { state: 'blink', color: 'red' },
+            onEnter: () => {
+                // Create a container for the SVG
+                const svgContainer = document.createElement('div');
+                svgContainer.style.position = 'absolute';
+                svgContainer.style.top = (canvas.offsetTop + 20) + 'px'; // Center vertically
+                svgContainer.style.left = (canvas.offsetLeft + 53) + 'px'; // Center horizontally (160-54)/2 = 53
+                svgContainer.style.width = '54px';
+                svgContainer.style.height = '40px';
+                svgContainer.style.zIndex = '20';
+                svgContainer.dataset.svgContainer = 'true';
+                canvas.parentNode.appendChild(svgContainer);
+
+                // Create and load the SVG
+                const img = document.createElement('img');
+                img.src = 'Assets/Battery Empty.svg';
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'contain';
+                svgContainer.appendChild(img);
+
+                // Blinking animation - sync with LED timing
+                let startTime = Date.now();
+                const animate = () => {
+                    const currentStates = flows[currentFlow];
+                    const currentState = currentStates[currentStateIndex];
+                    if (currentState.title === "Battery 0%") {
+                        // Use time-based animation to match LED CSS animation exactly
+                        const elapsed = Date.now() - startTime;
+                        const cycleTime = 1000; // 1 second cycle
+                        const cycleProgress = (elapsed % cycleTime) / cycleTime;
+                        
+                        // Match LED blink keyframes exactly: 0%, 100% = opacity 1, 50% = opacity 0.3
+                        let opacity;
+                        if (cycleProgress <= 0.5) {
+                            // First half: fade from 1 to 0.3
+                            opacity = 1 - (cycleProgress * 2) * 0.7; // 1 to 0.3
+                        } else {
+                            // Second half: fade from 0.3 to 1
+                            opacity = 0.3 + ((cycleProgress - 0.5) * 2) * 0.7; // 0.3 to 1
+                        }
+                        svgContainer.style.opacity = opacity;
+                        
+                        // After 10 seconds, turn off
+                        if (elapsed >= 10000) {
+                            // Simulate device turning off
+                            currentFlow = 'power';
+                            currentStateIndex = 0; // Move to Off state
+                            updateDisplay();
+                            return;
+                        }
+                        
+                        requestAnimationFrame(animate);
+                    } else {
+                        // Cleanup when switching away
+                        if (svgContainer.parentNode) {
+                            svgContainer.parentNode.removeChild(svgContainer);
+                        }
+                    }
+                };
+                
+                animate();
+                
+                return {
+                    destroy: () => {
+                        if (svgContainer.parentNode) {
+                            svgContainer.parentNode.removeChild(svgContainer);
+                        }
+                    }
+                };
+            }
         },
         {
             title: "Battery 25%",
@@ -2897,14 +2496,14 @@ const flows = {
         },
         {
             title: "Battery 10% Low",
-            explanation: "Battery critically low at 10%",
+            explanation: "Battery critically low at 10%. LED remains colour of device state (connection, shot state etc)",
             draw: (ctx, frame) => {
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, 160, 80);
                 
                 drawSVGBatteryWidget(ctx, 10);
             },
-            led: { state: 'breathing', color: 'red' }
+            led: { state: 'on', color: 'green' }
         }
     ]
 };
@@ -2919,6 +2518,7 @@ let currentAnimation = null;
 // Navigation elements
 const prevButton = document.getElementById('prevStep');
 const nextButton = document.getElementById('nextStep');
+const hitShotButton = document.getElementById('hitShot');
 const explanationText = document.getElementById('stepExplanation');
 const currentStepSpan = document.getElementById('currentStep');
 const totalStepsSpan = document.getElementById('totalSteps');
@@ -2929,6 +2529,10 @@ const ledLight = document.getElementById('ledLight');
 let powerButtonPressStartTime = 0;
 let isPowerButtonPressed = false;
 const SHUTDOWN_HOLD_TIME = 3300; // 5 seconds in milliseconds
+
+// Shot detection variables
+let shotDetected = false;
+let shotDetectionTime = 0;
 let showSerialNumber = false;
 let connectionState = 'searching';
 
@@ -3192,6 +2796,17 @@ function updateDisplay() {
     prevButton.disabled = currentStateIndex === 0;
     nextButton.disabled = currentStateIndex === currentStates.length - 1;
     
+    // Show/hide shot button based on current flow and state
+    if (currentFlow === 'ShotState' && currentStateIndex === 0) {
+        hitShotButton.style.display = 'block';
+        // Enable/disable based on sequence stage (only when ready)
+        const elapsedTime = Date.now() - (currentState.startTime || Date.now());
+        const isReady = elapsedTime >= 5000; // After 5 seconds when Ready.png is shown
+        hitShotButton.disabled = !isReady;
+    } else {
+        hitShotButton.style.display = 'none';
+    }
+    
     // Update reference image
     updateReferenceImage(currentState);
 }
@@ -3208,6 +2823,25 @@ nextButton.addEventListener('click', () => {
     if (currentStateIndex < flows[currentFlow].length - 1) {
         currentStateIndex++;
         updateDisplay();
+    }
+});
+
+// Shot button event listener
+hitShotButton.addEventListener('click', () => {
+    if (currentFlow === 'ShotState' && currentStateIndex === 0) {
+        // Trigger shot detection
+        shotDetected = true;
+        shotDetectionTime = Date.now();
+        
+        // Disable the button temporarily
+        hitShotButton.disabled = true;
+        hitShotButton.textContent = 'Shot Detected!';
+        
+        // Re-enable after 2 seconds
+        setTimeout(() => {
+            hitShotButton.disabled = false;
+            hitShotButton.textContent = 'Hit Shot';
+        }, 2000);
     }
 });
 
@@ -3307,13 +2941,7 @@ function cancelShutdown() {
 
 // Modify the power button event handlers
 powerButton.addEventListener('mousedown', () => {
-    if (currentFlow === 'binding' && currentStateIndex === 0) {
-        // Toggle between QR code and serial number in binding ready state
-        showSerialNumber = !showSerialNumber;
-        const currentStates = flows[currentFlow];
-        const currentState = currentStates[currentStateIndex];
-        currentState.draw(ctx, 0); // Force immediate redraw
-    } else if (isPoweredOff) {
+    if (isPoweredOff) {
         startPowerOn();
     } else if (currentFlow === 'power') {
         // Start tracking power button press
@@ -3328,13 +2956,7 @@ powerButton.addEventListener('mousedown', () => {
 // Update touch events similarly
 powerButton.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (currentFlow === 'binding' && currentStateIndex === 0) {
-        // Toggle between QR code and serial number in binding ready state
-        showSerialNumber = !showSerialNumber;
-        const currentStates = flows[currentFlow];
-        const currentState = currentStates[currentStateIndex];
-        currentState.draw(ctx, 0); // Force immediate redraw
-    } else if (isPoweredOff) {
+    if (isPoweredOff) {
         startPowerOn();
     } else if (currentFlow === 'power') {
         // Start tracking power button press
